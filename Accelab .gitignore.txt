@@ -1,3 +1,0 @@
-# Xcode user data
-*.xcuserdatad/
-*.xcuserdata/
