@@ -5,10 +5,9 @@
 //  Created by Myung Joon Kang on 2025-09-20.
 //
 
+import SwiftUI
 import CoreMotion
 import simd
-import Observation
-import SwiftUI
 
 @Observable
 final class AngleManager {
@@ -60,5 +59,9 @@ final class AngleManager {
         guard isRunning else { return }
         motionManager.stopDeviceMotionUpdates()
         isRunning = false
+    }
+    
+    func isCurrentAngleWithinMargin(targetAngle: Double, margin: Double) -> Bool {
+        return (abs(targetAngle - self.currentAngle) <= margin)
     }
 }

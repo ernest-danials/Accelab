@@ -9,16 +9,24 @@ import SwiftUI
 
 struct ContentView: View {
     @Environment(AngleManager.self) var angleManager: AngleManager
+    @Environment(\.colorScheme) var colorScheme
     
     @State private var currentStep: Step = .idle
+    
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
     @State private var isShowingDeviceOrientationNotValidDisclaimer: Bool = false
     
+    @State private var desiredAngle: Double = 1.0
+    
     var body: some View {
         ZStack {
+            stepTitleView(for: currentStep)
+            
             switch currentStep {
             case .idle:
                 idleView
+            case .chooseAngle:
+                chooseAngleView
             case .determineAngle:
                 determineAngleView.setUpForDeviceOrientationNotValidDisclaimer(isShowing: isShowingDeviceOrientationNotValidDisclaimer)
             case .standby:
@@ -35,6 +43,7 @@ struct ContentView: View {
                 }
             }
         }
+        .background((angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1) && currentStep == .determineAngle) ? .green3.opacity(0.5) : .clear)
         .onChange(of: self.currentStep) { _, newValue in
             if newValue == .determineAngle {
                 angleManager.start()
@@ -69,73 +78,115 @@ struct ContentView: View {
             .foregroundStyle(.green2.gradient)
             .rotationEffect(.degrees(-20))
             
-            VStack(alignment: .leading) {
-                Text(Step.idle.subtitle)
-                    .customFont(.title2)
-                    .foregroundStyle(.secondary)
+            GlassButton(text: "Start") {
+                changeCurrentStep(to: .chooseAngle)
+            }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
+        }
+    }
+    
+    @ViewBuilder
+    private var chooseAngleView: some View {
+        ZStack {
+            VStack {
+                Slider(value: $desiredAngle, in: 1...50, step: 0.01) {
+                    Text("Desired Angle")
+                } minimumValueLabel: {
+                    Text("1.00°")
+                } maximumValueLabel: {
+                    Text("50.00°")
+                }
+                .frame(width: 400)
                 
-                Text(Step.idle.title)
+                Text("\(desiredAngle, specifier: "%.2f")°")
                     .customFont(.largeTitle, weight: .bold)
+                    .contentTransition(.numericText(value: desiredAngle))
+                
+                HStack {
+                    let minAngle = 1.0
+                    let maxAngle = 50.0
+
+                    // –1°
+                    GlassButton(text: "-1°", style: .secondary, textFont: .subheadline, isDisabled: (desiredAngle - 1.0) < minAngle) {
+                        withAnimation {
+                            desiredAngle = max(minAngle, desiredAngle - 1.0)
+                            desiredAngle = (desiredAngle * 100).rounded() / 100
+                        }
+                    }
+
+                    // +1°
+                    GlassButton(text: "+1°", style: .secondary, textFont: .subheadline, isDisabled: (desiredAngle + 1.0) > maxAngle) {
+                        withAnimation {
+                            desiredAngle = min(maxAngle, desiredAngle + 1.0)
+                            desiredAngle = (desiredAngle * 100).rounded() / 100
+                        }
+                    }
+
+                    Divider()
+
+                    // –0.1°
+                    GlassButton(text: "-0.1°", style: .secondary, textFont: .subheadline, isDisabled: (desiredAngle - 0.1) < minAngle) {
+                        withAnimation {
+                            desiredAngle = max(minAngle, desiredAngle - 0.1)
+                            desiredAngle = (desiredAngle * 100).rounded() / 100
+                        }
+                    }
+
+                    // +0.1°
+                    GlassButton(text: "+0.1°", style: .secondary, textFont: .subheadline, isDisabled: (desiredAngle + 0.1) > maxAngle) {
+                        withAnimation {
+                            desiredAngle = min(maxAngle, desiredAngle + 0.1)
+                            desiredAngle = (desiredAngle * 100).rounded() / 100
+                        }
+                    }
+
+                    Divider()
+
+                    // –0.01°
+                    GlassButton(text: "-0.01°", style: .secondary, textFont: .subheadline, isDisabled: (desiredAngle - 0.01) < minAngle) {
+                        withAnimation {
+                            desiredAngle = max(minAngle, desiredAngle - 0.01)
+                            desiredAngle = (desiredAngle * 100).rounded() / 100
+                        }
+                    }
+
+                    // +0.01°
+                    GlassButton(text: "+0.01°", style: .secondary, textFont: .subheadline, isDisabled: (desiredAngle + 0.01) > maxAngle) {
+                        withAnimation {
+                            desiredAngle = min(maxAngle, desiredAngle + 0.01)
+                            desiredAngle = (desiredAngle * 100).rounded() / 100
+                        }
+                    }
+                }
+                .frame(maxHeight: 50)
             }
-            .alignView(to: .leading)
-            .alignViewVertically(to: .top)
-            .padding(30)
+            .offset(y: 15)
             
-            if #available(iOS 26.0, *) {
-                Button {
-                    changeCurrentStep(to: .determineAngle)
-                } label: {
-                    Text("Continue")
-                        .customFont(.title3, weight: .medium)
-                        .padding(.vertical, 5)
-                        .padding(.horizontal, 20)
+            HStack {
+                GlassButton(text: "Cancel", style: .secondary) {
+                    changeCurrentStep(to: .idle)
+                    self.desiredAngle = 1.0
                 }
-                .buttonStyle(.glassProminent)
-                .alignView(to: .trailing)
-                .alignViewVertically(to: .bottom)
-                .padding()
-            } else {
-                Button {
+                
+                GlassButton(text: "Continue") {
                     changeCurrentStep(to: .determineAngle)
-                } label: {
-                    Text("Continue")
-                        .customFont(.title3, weight: .medium)
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 9)
-                        .padding(.horizontal, 25)
-                        .background(.accent.gradient)
-                        .cornerRadius(15, corners: .allCorners)
                 }
-                .scaleButtonStyle()
-                .alignView(to: .trailing)
-                .alignViewVertically(to: .bottom)
-                .padding()
             }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
         }
     }
     
     @ViewBuilder
     private var determineAngleView: some View {
         ZStack {
-            VStack(alignment: .leading) {
-                Text(Step.determineAngle.subtitle)
-                    .customFont(.subheadline)
-                    .foregroundStyle(.secondary)
-                
-                Text(Step.determineAngle.title)
-                    .customFont(.title3, weight: .bold)
-                
-                Text(Step.determineAngle.description)
-                    .customFont(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-            .alignView(to: .leading)
-            .alignViewVertically(to: .top)
-            .padding(30)
-            
             HStack {
                 Text("\(angleManager.currentAngle, specifier: "%.2f")°")
                     .customFont(.largeTitle, weight: .bold)
+                    .contentTransition(.numericText(value: angleManager.currentAngle))
                     .frame(width: 130)
                     .minimumScaleFactor(0.7)
                 
@@ -154,12 +205,67 @@ struct ContentView: View {
 
                     // Fixed reference line (horizontal)
                     Capsule()
-                        .fill(Color.accentColor)
+                        .fill(angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1) ? (colorScheme == .dark ? .white : .black) : .accentColor)
                         .frame(width: 250, height: 4)
                 }
             }
             .offset(y: 20)
+            
+            VStack(alignment: .leading) {
+                Label("Target Angle: \(desiredAngle, specifier: "%.2f")°", systemImage: "angle")
+                    .customFont(.subheadline, weight: .medium)
+                
+                #warning("Create an actual user preference manager for this")
+                Label("Margin of Error: 0.10°", systemImage: "plusminus")
+                    .customFont(.subheadline, weight: .medium)
+                
+                Text("You can change the margin of error in the settings menu.")
+                    .customFont(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .padding()
+            .alignView(to: .leading)
+            .alignViewVertically(to: .bottom)
+            
+            HStack {
+                GlassButton(text: "Back", style: .secondary) {
+                    changeCurrentStep(to: .chooseAngle)
+                }
+                
+                GlassButton(text: "Continue", isDisabled: !angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1)) {
+                    changeCurrentStep(to: .standby)
+                }
+            }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
         }
+    }
+    
+    @ViewBuilder
+    private func stepTitleView(for step: Step) -> some View {
+        VStack(alignment: .leading) {
+            if !step.subtitle.isEmpty {
+                Text(step.subtitle)
+                    .customFont(step == .idle ? .title3 : .subheadline)
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+            }
+        
+            Text(step.title)
+                .customFont(step == .idle ? .largeTitle : .title3, weight: .bold)
+                .contentTransition(.numericText())
+            
+            if !step.description.isEmpty {
+                Text(step.description)
+                    .customFont(.footnote)
+                    .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
+            }
+        }
+        .alignView(to: .leading)
+        .alignViewVertically(to: .top)
+        .padding(30)
     }
     
     private func changeCurrentStep(to step: Step) {
@@ -169,8 +275,9 @@ struct ContentView: View {
     }
 }
 
+#warning("Refactor this")
 enum Step: CaseIterable, Identifiable {
-    case idle, determineAngle, standby, measuring, completed
+    case idle, chooseAngle, determineAngle, standby, measuring, completed
     
     var id: Self { self }
     
@@ -178,6 +285,8 @@ enum Step: CaseIterable, Identifiable {
         switch self {
         case .idle:
             return "Accelab"
+        case .chooseAngle:
+            return "Choose the Angle"
         case .determineAngle:
             return "Determine the Angle"
         case .standby:
@@ -193,12 +302,14 @@ enum Step: CaseIterable, Identifiable {
         switch self {
         case .idle:
             return "Welcome to"
-        case .determineAngle:
+        case .chooseAngle:
             return "Step 1"
+        case .determineAngle:
+            return "Step 2"
         case .standby:
-            return ""
+            return "Step 3"
         case .measuring:
-            return ""
+            return "Step 4"
         case .completed:
             return ""
         }
@@ -208,8 +319,10 @@ enum Step: CaseIterable, Identifiable {
         switch self {
         case .idle:
             return ""
+        case .chooseAngle:
+            return "Choose the desired slope of your track."
         case .determineAngle:
-            return "Measure or choose the slop of your track."
+            return "Measure and determine the slope of your track."
         case .standby:
             return ""
         case .measuring:
