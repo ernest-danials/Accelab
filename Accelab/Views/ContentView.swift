@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var isShowingDeviceOrientationNotValidDisclaimer: Bool = false
     
     @State private var desiredAngle: Double = 1.0
+    @State private var capturedAngle: Double? = nil
     
     var body: some View {
         ZStack {
@@ -30,9 +31,7 @@ struct ContentView: View {
             case .determineAngle:
                 determineAngleView.setUpForDeviceOrientationNotValidDisclaimer(isShowing: isShowingDeviceOrientationNotValidDisclaimer)
             case .standby:
-                VStack {
-                    
-                }
+                standbyView
             case .measuring:
                 VStack {
                     
@@ -78,8 +77,14 @@ struct ContentView: View {
             .foregroundStyle(.green2.gradient)
             .rotationEffect(.degrees(-20))
             
-            GlassButton(text: "Start") {
-                changeCurrentStep(to: .chooseAngle)
+            HStack {
+                GlassButton(text: "Settings", style: .secondary) {
+                    
+                }
+                
+                GlassButton(text: "Start") {
+                    changeCurrentStep(to: .chooseAngle)
+                }
             }
             .alignView(to: .trailing)
             .alignViewVertically(to: .bottom)
@@ -233,8 +238,44 @@ struct ContentView: View {
                 }
                 
                 GlassButton(text: "Continue", isDisabled: !angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1)) {
+                    angleManager.stop()
+                    self.capturedAngle = angleManager.currentAngle
                     changeCurrentStep(to: .standby)
                 }
+            }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
+        }
+    }
+    
+    @ViewBuilder
+    private var standbyView: some View {
+        ZStack {
+            VStack {
+                GlassButton(text: "Begin", textFont: .title) {
+                    
+                }
+                
+                Text("Now that your track is all set, secure your iPhone to your cart and put in on the track. \nTap 'Begin' when you're ready.")
+                    .customFont(.footnote, weight: .medium)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 300)
+            }
+            .offset(y: 15)
+            
+            Label("Make sure your iPhone is securely fastened on the cart. Otherwise, your iPhone may fall off and get damaged.", systemImage: "exclamationmark.triangle.fill")
+                .customFont(.footnote, weight: .medium)
+                .foregroundStyle(.red)
+                .multilineTextAlignment(.leading)
+                .frame(width: 300)
+                .minimumScaleFactor(0.7)
+                .padding()
+                .alignView(to: .leading)
+                .alignViewVertically(to: .bottom)
+            
+            GlassButton(text: "Back", style: .secondary) {
+                changeCurrentStep(to: .determineAngle)
             }
             .alignView(to: .trailing)
             .alignViewVertically(to: .bottom)
@@ -290,7 +331,7 @@ enum Step: CaseIterable, Identifiable {
         case .determineAngle:
             return "Determine the Angle"
         case .standby:
-            return ""
+            return "Attach Your iPhone to the Cart"
         case .measuring:
             return ""
         case .completed:
