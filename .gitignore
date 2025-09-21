@@ -1,24 +1,2 @@
-# Xcode build products
-DerivedData/
-build/
-
-# Swift Package Manager
-.swiftpm/
-Packages/
-Package.resolved
-
-# CocoaPods
-Pods/
-
-# Carthage
-Carthage/Build/
-
-# User settings
-*.xcuserstate
+*.xcuserdatad/
 *.xcuserdata/
-
-# macOS system files
-.DS_Store
-
-# Logs
-*.log
