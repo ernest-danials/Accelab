@@ -25,7 +25,7 @@ enum Step: CaseIterable, Identifiable {
         case .measuring:
             return "Collect Data"
         case .completed:
-            return ""
+            return "Completed"
         }
     }
     
@@ -59,7 +59,7 @@ enum Step: CaseIterable, Identifiable {
         case .measuring:
             return "Accelab is recording the motion of your cart as it travels down the track."
         case .completed:
-            return ""
+            return "Your lab data is ready for analysis! Make sure to save it before exiting."
         }
     }
 }

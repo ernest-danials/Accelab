@@ -21,6 +21,9 @@ struct ContentView: View {
     @State private var capturedAngle: Double? = nil
     
     @State private var isShowingConfirmationDialogToGoBackInMeasuringView: Bool = false
+    @State private var isShowingConfirmationDialogToExitInCompletedView: Bool = false
+    
+    @State private var csvURL: URL? = nil
     
     var body: some View {
         ZStack {
@@ -38,9 +41,7 @@ struct ContentView: View {
             case .measuring:
                 measuringView
             case .completed:
-                VStack {
-                    
-                }
+                completedView
             }
         }
         .background((angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1) && currentStep == .determineAngle) ? .green3.opacity(0.5) : .clear)
@@ -384,6 +385,98 @@ struct ContentView: View {
                 GlassButton(text: "Done") {
                     measuringManager.stop()
                     changeCurrentStep(to: .completed)
+                    self.csvURL = writeCSVTempFile(measuringManager.makeCSV())
+                }
+            }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
+        }
+    }
+    
+    @ViewBuilder
+    private var completedView: some View {
+        ZStack {
+            HStack(spacing: 15) {
+                VStack {
+                    Image(systemName: "angle")
+                        .customFont(.title3, weight: .bold)
+                        .padding(.bottom, 2)
+                    
+                    Text("Target Angle: \(desiredAngle, specifier: "%.2f")°")
+                        .customFont(.title3, weight: .bold)
+                    
+                    if let capturedAngle = self.capturedAngle {
+                        Text("Actual Angle: \(capturedAngle, specifier: "%.2f")°")
+                            .customFont(.title3, weight: .bold)
+                    } else {
+                        Text("Actual Angle: Error")
+                            .customFont(.title3, weight: .bold)
+                    }
+                    
+                    Text("Margin: \(abs(desiredAngle - (capturedAngle ?? 0)), specifier: "%.2f")°")
+                        .customFont(.footnote, weight: .medium)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Divider()
+                    .frame(height: 150)
+                
+                VStack {
+                    Image(systemName: "tablecells")
+                        .customFont(.title3, weight: .bold)
+                        .padding(.bottom, 2)
+                    
+                    if let lastSplit = measuringManager.splits.last {
+                        Text("Time Elapsed: \(lastSplit.timeElapsed, specifier: "%.2f") s")
+                            .customFont(.title3, weight: .bold)
+                        
+                        Text("Distance Travelled: \(lastSplit.displacement, specifier: "%.2f") m")
+                            .customFont(.title3, weight: .bold)
+                    }
+                    
+                    Text("\(measuringManager.splits.count) Splits")
+                        .customFont(.footnote, weight: .medium)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .offset(y: 15)
+            
+            HStack {
+                if let url = csvURL {
+                    if #available(iOS 26.0, *) {
+                        ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
+                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                                .customFont(.title3, weight: .medium)
+                                .padding(.vertical, 5)
+                                .padding(.horizontal, 20)
+                        }
+                        .buttonStyle(.glassProminent)
+                    } else {
+                        ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
+                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                                .customFont(.title3, weight: .medium)
+                                .foregroundStyle(.white)
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 25)
+                                .background(.accent.gradient)
+                                .cornerRadius(15, corners: .allCorners)
+                        }
+                    }
+                } else {
+                    ProgressView()
+                }
+                
+                GlassButton(text: "Done", style: .secondary) {
+                    self.isShowingConfirmationDialogToExitInCompletedView = true
+                }
+                .confirmationDialog("This will reset all your data and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmationDialogToExitInCompletedView, titleVisibility: .visible) {
+                    Button("Yes, reset and go back", role: .destructive) {
+                        self.measuringManager.reset()
+                        self.desiredAngle = 1.0
+                        self.capturedAngle = nil
+                        changeCurrentStep(to: .idle)
+                    }
                 }
             }
             .alignView(to: .trailing)
@@ -421,6 +514,19 @@ struct ContentView: View {
     private func changeCurrentStep(to step: Step) {
         withAnimation {
             self.currentStep = step
+        }
+    }
+    
+    private func writeCSVTempFile(_ csv: String) -> URL? {
+        let stamp = ISO8601DateFormatter().string(from: Date())
+        
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("accelab-\(stamp).csv")
+        
+        do {
+            try csv.write(to: url, atomically: true, encoding: .utf8)
+            return url
+        } catch {
+            return nil
         }
     }
 }
