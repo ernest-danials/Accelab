@@ -37,7 +37,7 @@ struct SettingsView: View {
                 }
                 
                 Section {
-                    Link(destination: URL(string: "https://myungjoon.com/accelab/privacy")!) {
+                    Link(destination: URL(string: "https://github.com/ernest-danials/Accelab")!) {
                         Text("GitHub Repository")
                     }
                 } footer: {

@@ -21,6 +21,7 @@ struct ContentView: View {
     @State private var desiredAngle: Double = 1.0
     @State private var capturedAngle: Double? = nil
     
+    @State private var isShowingConfirmatoinDialogToGoBackInChooseAngleView: Bool = false
     @State private var isShowingConfirmationDialogToGoBackInMeasuringView: Bool = false
     @State private var isShowingConfirmationDialogToExitInCompletedView: Bool = false
     
@@ -172,8 +173,17 @@ struct ContentView: View {
             
             HStack {
                 GlassButton(text: "Cancel", style: .secondary) {
-                    self.desiredAngle = 1.0
-                    changeCurrentStep(to: .idle)
+                    if self.desiredAngle == 1.0 {
+                        changeCurrentStep(to: .idle)
+                    } else {
+                        self.isShowingConfirmatoinDialogToGoBackInChooseAngleView = true
+                    }
+                }
+                .confirmationDialog("This will reset the angle you chose and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmatoinDialogToGoBackInChooseAngleView, titleVisibility: .visible) {
+                    Button("Yes, reset and go back", role: .destructive) {
+                        self.desiredAngle = 1.0
+                        changeCurrentStep(to: .idle)
+                    }
                 }
                 
                 GlassButton(text: "Continue") {
@@ -387,7 +397,7 @@ struct ContentView: View {
                     }
                 }
                 
-                GlassButton(text: "Done") {
+                GlassButton(text: "Done", isDisabled: (measuringManager.splits.isEmpty)) {
                     measuringManager.stop()
                     changeCurrentStep(to: .completed)
                     self.csvURL = writeCSVTempFile(measuringManager.makeCSV())
