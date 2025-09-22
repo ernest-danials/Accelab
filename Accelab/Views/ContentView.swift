@@ -17,6 +17,7 @@ struct ContentView: View {
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
     @State private var isShowingDeviceOrientationNotValidDisclaimer: Bool = false
     
+    @AppStorage(AppStorageKey.marginOfErrorForAngle.rawValue) private var marginOfErrorForAngle: Double = 0.1
     @State private var desiredAngle: Double = 1.0
     @State private var capturedAngle: Double? = nil
     
@@ -24,6 +25,8 @@ struct ContentView: View {
     @State private var isShowingConfirmationDialogToExitInCompletedView: Bool = false
     
     @State private var csvURL: URL? = nil
+    
+    @State private var isShowingSettingsView: Bool = false
     
     var body: some View {
         ZStack {
@@ -44,7 +47,7 @@ struct ContentView: View {
                 completedView
             }
         }
-        .background((angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1) && currentStep == .determineAngle) ? .green3.opacity(0.5) : .clear)
+        .background((angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle) && currentStep == .determineAngle) ? .green3.opacity(0.5) : .clear)
         .onDeviceRotation { newOrientation in
             if newOrientation.isValidInterfaceOrientation {
                 angleManager.start()
@@ -56,6 +59,9 @@ struct ContentView: View {
                 angleManager.stop()
                 withAnimation { self.isShowingDeviceOrientationNotValidDisclaimer = true }
             }
+        }
+        .fullScreenCover(isPresented: $isShowingSettingsView) {
+            SettingsView()
         }
     }
     
@@ -74,7 +80,7 @@ struct ContentView: View {
             
             HStack {
                 GlassButton(text: "Settings", style: .secondary) {
-                    
+                    self.isShowingSettingsView = true
                 }
                 
                 GlassButton(text: "Start") {
@@ -206,7 +212,7 @@ struct ContentView: View {
 
                     // Fixed reference line (horizontal)
                     Capsule()
-                        .fill(angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1) ? (colorScheme == .dark ? .white : .black) : .accentColor)
+                        .fill(angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle) ? (colorScheme == .dark ? .white : .black) : .accentColor)
                         .frame(width: 250, height: 4)
                 }
             }
@@ -216,8 +222,7 @@ struct ContentView: View {
                 Label("Target Angle: \(desiredAngle, specifier: "%.2f")°", systemImage: "angle")
                     .customFont(.subheadline, weight: .medium)
                 
-                #warning("Create an actual user preference manager for this")
-                Label("Margin of Error: 0.10°", systemImage: "plusminus")
+                Label("Margin of Error: \(self.marginOfErrorForAngle, specifier: "%.2f")°", systemImage: "plusminus")
                     .customFont(.subheadline, weight: .medium)
                 
                 Text("You can change the margin of error in the settings menu.")
@@ -235,7 +240,7 @@ struct ContentView: View {
                     changeCurrentStep(to: .chooseAngle)
                 }
                 
-                GlassButton(text: "Continue", isDisabled: !angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1)) {
+                GlassButton(text: "Continue", isDisabled: !angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle)) {
                     angleManager.stop()
                     self.capturedAngle = angleManager.currentAngle
                     changeCurrentStep(to: .standby)
