@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct ContentView: View {
-    @Environment(AngleManager.self) var angleManager: AngleManager
+    @Environment(AngleManager.self) private var angleManager: AngleManager
+    @Environment(MeasuringManager.self) private var measuringManager: MeasuringManager
     @Environment(\.colorScheme) var colorScheme
     
     @State private var currentStep: Step = .idle
@@ -18,6 +19,8 @@ struct ContentView: View {
     
     @State private var desiredAngle: Double = 1.0
     @State private var capturedAngle: Double? = nil
+    
+    @State private var isShowingConfirmationDialogToGoBackInMeasuringView: Bool = false
     
     var body: some View {
         ZStack {
@@ -33,9 +36,7 @@ struct ContentView: View {
             case .standby:
                 standbyView
             case .measuring:
-                VStack {
-                    
-                }
+                measuringView
             case .completed:
                 VStack {
                     
@@ -43,13 +44,6 @@ struct ContentView: View {
             }
         }
         .background((angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: 0.1) && currentStep == .determineAngle) ? .green3.opacity(0.5) : .clear)
-        .onChange(of: self.currentStep) { _, newValue in
-            if newValue == .determineAngle {
-                angleManager.start()
-            } else {
-                angleManager.stop()
-            }
-        }
         .onDeviceRotation { newOrientation in
             if newOrientation.isValidInterfaceOrientation {
                 angleManager.start()
@@ -171,11 +165,12 @@ struct ContentView: View {
             
             HStack {
                 GlassButton(text: "Cancel", style: .secondary) {
-                    changeCurrentStep(to: .idle)
                     self.desiredAngle = 1.0
+                    changeCurrentStep(to: .idle)
                 }
                 
                 GlassButton(text: "Continue") {
+                    angleManager.start()
                     changeCurrentStep(to: .determineAngle)
                 }
             }
@@ -234,6 +229,8 @@ struct ContentView: View {
             
             HStack {
                 GlassButton(text: "Back", style: .secondary) {
+                    angleManager.stop()
+                    self.capturedAngle = nil
                     changeCurrentStep(to: .chooseAngle)
                 }
                 
@@ -254,15 +251,37 @@ struct ContentView: View {
         ZStack {
             VStack {
                 GlassButton(text: "Begin", textFont: .title) {
-                    
+                    changeCurrentStep(to: .measuring)
+                    measuringManager.start()
                 }
                 
-                Text("Now that your track is all set, secure your iPhone to your cart and put in on the track. \nTap 'Begin' when you're ready.")
+                Text("Now that your track is all set, secure your iPhone to your cart and put in on the track. \nTap 'Begin' when you're ready to start recording.")
                     .customFont(.footnote, weight: .medium)
                     .multilineTextAlignment(.center)
                     .frame(width: 300)
             }
             .offset(y: 15)
+            
+            HStack {
+                if currentDeviceOrientation == .landscapeLeft {
+                    Image(systemName: "chevron.compact.left")
+                        .font(.system(size: 60))
+                        .transition(.blurReplace)
+                }
+                
+                Text("Your cart must be facing this way")
+                    .customFont(.subheadline, weight: .medium)
+                
+                if currentDeviceOrientation == .landscapeRight {
+                    Image(systemName: "chevron.compact.right")
+                        .font(.system(size: 60))
+                        .transition(.blurReplace)
+                }
+            }
+            .foregroundStyle(.yellow)
+            .frame(width: 120)
+            .alignView(to: currentDeviceOrientation == .landscapeLeft ? .leading : .trailing)
+            .padding()
             
             Label("Make sure your iPhone is securely fastened on the cart. Otherwise, your iPhone may fall off and get damaged.", systemImage: "exclamationmark.triangle.fill")
                 .customFont(.footnote, weight: .medium)
@@ -275,7 +294,97 @@ struct ContentView: View {
                 .alignViewVertically(to: .bottom)
             
             GlassButton(text: "Back", style: .secondary) {
+                angleManager.start()
                 changeCurrentStep(to: .determineAngle)
+            }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
+        }
+    }
+    
+    @ViewBuilder
+    private var measuringView: some View {
+        ZStack {
+            ScrollView(.horizontal) {
+                LazyHStack {
+                    ForEach(measuringManager.splits.reversed()) { split in
+                        VStack(spacing: 15) {
+                            Text("\(split.timeElapsed, specifier: "%.2f")")
+                                .customFont(.title2, weight: .medium)
+                            
+                            Text("\(split.displacement, specifier: "%.2f")")
+                                .customFont(.title2, weight: .medium)
+                        }
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
+            .safeAreaPadding(.horizontal, 30)
+            .safeAreaPadding(.leading, 100)
+            
+            if #available(iOS 26.0, *) {
+                VStack(spacing: 15) {
+                    VStack {
+                        Image(systemName: "stopwatch.fill")
+                            .customFont(.title3, weight: .medium)
+                        
+                        Text("Second")
+                            .customFont(.footnote)
+                    }
+                    
+                    VStack {
+                        Image(systemName: "ruler.fill")
+                            .customFont(.title3, weight: .medium)
+                        
+                        Text("Metre")
+                            .customFont(.footnote)
+                    }
+                }
+                .padding()
+                .glassEffect()
+                .alignView(to: .leading)
+                .padding(30)
+            } else {
+                VStack(spacing: 15) {
+                    VStack {
+                        Image(systemName: "stopwatch.fill")
+                            .customFont(.title3, weight: .medium)
+                        
+                        Text("Second")
+                            .customFont(.footnote)
+                    }
+                    
+                    VStack {
+                        Image(systemName: "ruler.fill")
+                            .customFont(.title3, weight: .medium)
+                        
+                        Text("Metre")
+                            .customFont(.footnote)
+                    }
+                }
+                .padding()
+                .background(Material.ultraThin)
+                .clipShape(.capsule)
+                .alignView(to: .leading)
+                .padding(30)
+            }
+            
+            HStack {
+                GlassButton(text: "Back", style: .secondary) {
+                    self.isShowingConfirmationDialogToGoBackInMeasuringView = true
+                }
+                .confirmationDialog("This will reset all the collected data. Are you sure?", isPresented: $isShowingConfirmationDialogToGoBackInMeasuringView, titleVisibility: .visible) {
+                    Button("Yes, reset and go back", role: .destructive) {
+                        self.measuringManager.reset()
+                        changeCurrentStep(to: .standby)
+                    }
+                }
+                
+                GlassButton(text: "Done") {
+                    measuringManager.stop()
+                    changeCurrentStep(to: .completed)
+                }
             }
             .alignView(to: .trailing)
             .alignViewVertically(to: .bottom)
@@ -316,64 +425,6 @@ struct ContentView: View {
     }
 }
 
-#warning("Refactor this")
-enum Step: CaseIterable, Identifiable {
-    case idle, chooseAngle, determineAngle, standby, measuring, completed
-    
-    var id: Self { self }
-    
-    var title: String {
-        switch self {
-        case .idle:
-            return "Accelab"
-        case .chooseAngle:
-            return "Choose the Angle"
-        case .determineAngle:
-            return "Determine the Angle"
-        case .standby:
-            return "Attach Your iPhone to the Cart"
-        case .measuring:
-            return ""
-        case .completed:
-            return ""
-        }
-    }
-    
-    var subtitle: String {
-        switch self {
-        case .idle:
-            return "Welcome to"
-        case .chooseAngle:
-            return "Step 1"
-        case .determineAngle:
-            return "Step 2"
-        case .standby:
-            return "Step 3"
-        case .measuring:
-            return "Step 4"
-        case .completed:
-            return ""
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .idle:
-            return ""
-        case .chooseAngle:
-            return "Choose the desired slope of your track."
-        case .determineAngle:
-            return "Measure and determine the slope of your track."
-        case .standby:
-            return ""
-        case .measuring:
-            return ""
-        case .completed:
-            return ""
-        }
-    }
-}
-
 fileprivate extension View {
     func setUpForDeviceOrientationNotValidDisclaimer(isShowing: Bool) -> some View {
         self
@@ -391,4 +442,5 @@ fileprivate extension View {
 #Preview {
     ContentView()
         .environment(AngleManager())
+        .environment(MeasuringManager())
 }

@@ -13,6 +13,7 @@ struct AccelabApp: App {
         WindowGroup {
             ContentView()
                 .environment(AngleManager())
+                .environment(MeasuringManager())
         }
     }
 }
