@@ -1,5 +1,7 @@
 # Accelab
-Accelab is an educational application developed using SwiftUI. It aims to help students collect distance-time data from a cart on the air track lab.
+Accelab is an educational application developed using SwiftUI. It aims to help students collect distance-time data of a cart on an air track lab.
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ernest-danials/Accelab)
 
 ## Features
 - Choose a target angle of the track.
