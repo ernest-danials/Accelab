@@ -26,7 +26,7 @@ Please make sure you're not making duplicate issues. When opening an issue, plea
 5. Push and create a pull request
 
 ## Contribution Guidelines
-- Follow our [Code of Conduct](https://github.com/ernest-danials/Accelab/blob/main/CODE_OF_CONDUCT.md)
+- Follow our [Code of Conduct](CODE_OF_CONDUCT)
 - Keep PRs focused to a single issue or enhancement
 
 ## License
