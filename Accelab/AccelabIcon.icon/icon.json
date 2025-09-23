@@ -1,0 +1,50 @@
+{
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:0.00000,0.00000,0.00000,1.00000",
+      "display-p3:0.09277,0.11975,0.09610,1.00000"
+    ]
+  },
+  "groups" : [
+    {
+      "layers" : [
+        {
+          "image-name" : "Line 3.png",
+          "name" : "Line 3",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              145.95020878734556,
+              217.54924300340406
+            ]
+          }
+        },
+        {
+          "image-name" : "Draw Circle with Color Sep 22 2025.png",
+          "name" : "Circle",
+          "position" : {
+            "scale" : 0.61,
+            "translation-in-points" : [
+              -25.26737393828038,
+              -78.09503074761203
+            ]
+          }
+        }
+      ],
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
+      },
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}
