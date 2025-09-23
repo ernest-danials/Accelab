@@ -46,7 +46,7 @@ struct GlassButton: View {
                         .padding(.vertical, 10)
                         .padding(.horizontal, 25)
                         .background(.accent.gradient)
-                        .cornerRadius(15, corners: .allCorners)
+                        .clipShape(.capsule)
                         .opacity(isDisabled ? 0.7 : 1.0)
                 }
                 .scaleButtonStyle(scaleAmount: isDisabled ? 1.0 : 0.98)
@@ -73,8 +73,11 @@ struct GlassButton: View {
                         .foregroundStyle(.accent)
                         .padding(.vertical, 10)
                         .padding(.horizontal, 25)
-                        .background(.white)
-                        .cornerRadius(15, corners: .allCorners)
+                        .background {
+                            Capsule()
+                                .fill(.white)
+                                .shadow(color: .black.opacity(0.2), radius: 5)
+                        }
                         .opacity(isDisabled ? 0.7 : 1.0)
                 }
                 .scaleButtonStyle(scaleAmount: isDisabled ? 1.0 : 0.98)

@@ -28,6 +28,7 @@ struct ContentView: View {
     @State private var csvURL: URL? = nil
     
     @State private var isShowingSettingsView: Bool = false
+    @State private var isShowingWhatIsAccelabView: Bool = false
     
     var body: some View {
         ZStack {
@@ -64,6 +65,9 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $isShowingSettingsView) {
             SettingsView()
         }
+        .fullScreenCover(isPresented: $isShowingWhatIsAccelabView) {
+            WhatIsAccelabView()
+        }
     }
     
     @ViewBuilder
@@ -78,6 +82,13 @@ struct ContentView: View {
             }
             .foregroundStyle(.green2.gradient)
             .rotationEffect(.degrees(-20))
+            
+            GlassButton(text: "What is Accelab?", style: .secondary) {
+                self.isShowingWhatIsAccelabView = true
+            }
+            .alignView(to: .leading)
+            .alignViewVertically(to: .bottom)
+            .padding()
             
             HStack {
                 GlassButton(text: "Settings", style: .secondary) {

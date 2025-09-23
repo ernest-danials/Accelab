@@ -28,23 +28,43 @@ struct SettingsView: View {
                 
                 Section {
                     Link(destination: URL(string: "https://myungjoon.com/accelab")!) {
-                        Text("Project Website")
+                        HStack {
+                            Image(systemName: "arrow.up.right")
+                            
+                            Text("Project Website")
+                        }
                     }
                     
                     Link(destination: URL(string: "https://myungjoon.com")!) {
-                        Text("Developer Website")
+                        HStack {
+                            Image(systemName: "arrow.up.right")
+                            
+                            Text("Developer Website")
+                        }
                     }
                 }
                 
                 Section {
                     Link(destination: URL(string: "https://github.com/ernest-danials/Accelab")!) {
-                        Text("GitHub Repository")
+                        HStack {
+                            Image(systemName: "arrow.up.right")
+                            
+                            Text("GitHub Repository")
+                        }
                     }
                 } footer: {
                     Text("Accelab is an open-source project and open for contributions.")
                 }
                 
                 Section {
+                    Link(destination: URL(string: "https://myungjoon.com/accelab/support")!) {
+                        HStack {
+                            Image(systemName: "lifepreserver.fill")
+                            
+                            Text("Need help?")
+                        }
+                    }
+                    
                     Link(destination: URL(string: "https://myungjoon.com/accelab/privacy")!) {
                         HStack {
                             Image(systemName: "hand.raised.fill")
