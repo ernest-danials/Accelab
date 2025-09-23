@@ -12,7 +12,7 @@ Accelab is an educational application developed using SwiftUI. It aims to help s
 - [Developer website](https://myungjoon.com)
 
 ## Installation
-- Accelab is coming to the App Store soon.
+- Accelab is coming to the App Store soon for iOS 18.0 or later.
 
 ## Usage
 Accelab is designed for educational purposes. If you're a teacher and would like to use Accelab in your class, please use [our onboarding page](https://myungjoon.com/accelab/onboarding) to guide your students to download the app.
