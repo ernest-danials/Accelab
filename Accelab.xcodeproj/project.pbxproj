@@ -10,9 +10,22 @@
 		17424BBC2E7FAAD700D123E5 /* Accelab.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Accelab.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		1763BF722E8381F50036EEE5 /* Exceptions for "Accelab" folder in "Accelab" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 17424BBB2E7FAAD700D123E5 /* Accelab */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		17424BBE2E7FAAD700D123E5 /* Accelab */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				1763BF722E8381F50036EEE5 /* Exceptions for "Accelab" folder in "Accelab" target */,
+			);
 			path = Accelab;
 			sourceTree = "<group>";
 		};
@@ -258,7 +271,9 @@
 				DEVELOPMENT_TEAM = VNASSVSN5W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Accelab/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Accelab;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -300,7 +315,9 @@
 				DEVELOPMENT_TEAM = VNASSVSN5W;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Accelab/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Accelab;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.education";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
