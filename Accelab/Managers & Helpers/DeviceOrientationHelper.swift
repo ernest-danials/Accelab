@@ -15,7 +15,7 @@ struct DeviceRotationHelperViewModifier: ViewModifier {
         let device = UIDevice.current
         if device.orientation != .unknown { return device.orientation }
         if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            switch scene.interfaceOrientation {
+            switch scene.effectiveGeometry.interfaceOrientation {
             case .portrait: return .portrait
             case .portraitUpsideDown: return .portraitUpsideDown
             case .landscapeLeft: return .landscapeLeft
