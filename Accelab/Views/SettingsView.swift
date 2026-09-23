@@ -28,29 +28,17 @@ struct SettingsView: View {
                 
                 Section {
                     Link(destination: URL(string: "https://myungjoon.com/accelab")!) {
-                        HStack {
-                            Image(systemName: "arrow.up.right")
-                            
-                            Text("Project Website")
-                        }
+                        Label("Project Website", systemImage: "arrow.up.right")
                     }
                     
                     Link(destination: URL(string: "https://myungjoon.com")!) {
-                        HStack {
-                            Image(systemName: "arrow.up.right")
-                            
-                            Text("Developer Website")
-                        }
+                        Label("Developer Website", systemImage: "arrow.up.right")
                     }
                 }
                 
                 Section {
                     Link(destination: URL(string: "https://github.com/ernest-danials/Accelab")!) {
-                        HStack {
-                            Image(systemName: "arrow.up.right")
-                            
-                            Text("GitHub Repository")
-                        }
+                        Label("GitHub Repository", systemImage: "arrow.up.right")
                     }
                 } footer: {
                     Text("Accelab is an open-source project and open for contributions.")
@@ -58,19 +46,11 @@ struct SettingsView: View {
                 
                 Section {
                     Link(destination: URL(string: "https://myungjoon.com/accelab/support")!) {
-                        HStack {
-                            Image(systemName: "lifepreserver.fill")
-                            
-                            Text("Need help?")
-                        }
+                        Label("Need help?", systemImage: "lifepreserver.fill")
                     }
                     
                     Link(destination: URL(string: "https://myungjoon.com/accelab/privacy")!) {
-                        HStack {
-                            Image(systemName: "hand.raised.fill")
-                            
-                            Text("Privacy Policy")
-                        }
+                        Label("Privacy Policy", systemImage: "hand.raised.fill")
                     }
                 } footer: {
                     Text("Version: \(Bundle.main.versionBuildString) \nCopyright © 2025 Myung-Joon Kang. All rights reserved.")
@@ -80,10 +60,8 @@ struct SettingsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
+                    Button(role: .close) {
                         dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
                     }
                 }
             }

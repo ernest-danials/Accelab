@@ -8,10 +8,14 @@ Please make sure you're not making duplicate issues. When opening an issue, plea
 - Target platform, device or simulator
 - Description of the issue and how to reproduce it
 
+## Requirements
+- Xcode 26 or later
+- iOS 26.0 or later
+
 ## How to Contribute
 1. Fork the repository, then clone your fork:
    ```bash
-   git clone https://github.com/ernest-danials/Accelab.git
+   git clone https://github.com/<your-username>/Accelab.git
    cd Accelab
    ```
 2. Create a feature-specific branch
@@ -23,6 +27,7 @@ Please make sure you're not making duplicate issues. When opening an issue, plea
    ```bash
    git add .
    git commit -m "feature: your-feature-description"
+   ```
 5. Push and create a pull request
 
 ## Contribution Guidelines
@@ -30,8 +35,7 @@ Please make sure you're not making duplicate issues. When opening an issue, plea
 - Keep PRs focused to a single issue or enhancement
 
 ## License
-By contributing to Clima, you agree that your contributions will be licensed under the terms of the [MIT License](LICENSE)
+By contributing to Accelab, you agree that your contributions will be licensed under the terms of the [MIT License](LICENSE)
 
 ## Thank you! 🙏
-Your contributions help make Clima better for educators, students, and learners around the world.
-   
+Your contributions help make Accelab better for educators, students, and learners around the world.

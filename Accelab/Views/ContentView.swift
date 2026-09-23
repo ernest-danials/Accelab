@@ -403,52 +403,27 @@ struct ContentView: View {
             .safeAreaPadding(.horizontal, 30)
             .safeAreaPadding(.leading, 100)
             
-            if #available(iOS 26.0, *) {
-                VStack(spacing: 15) {
-                    VStack {
-                        Image(systemName: "stopwatch.fill")
-                            .customFont(.title3, weight: .medium)
-                        
-                        Text("Second")
-                            .customFont(.footnote)
-                    }
-                    
-                    VStack {
-                        Image(systemName: "ruler.fill")
-                            .customFont(.title3, weight: .medium)
-                        
-                        Text("Metre")
-                            .customFont(.footnote)
-                    }
+            VStack(spacing: 15) {
+                VStack {
+                    Image(systemName: "stopwatch.fill")
+                        .customFont(.title3, weight: .medium)
+
+                    Text("Second")
+                        .customFont(.footnote)
                 }
-                .padding()
-                .glassEffect()
-                .alignView(to: .leading)
-                .padding(30)
-            } else {
-                VStack(spacing: 15) {
-                    VStack {
-                        Image(systemName: "stopwatch.fill")
-                            .customFont(.title3, weight: .medium)
-                        
-                        Text("Second")
-                            .customFont(.footnote)
-                    }
-                    
-                    VStack {
-                        Image(systemName: "ruler.fill")
-                            .customFont(.title3, weight: .medium)
-                        
-                        Text("Metre")
-                            .customFont(.footnote)
-                    }
+
+                VStack {
+                    Image(systemName: "ruler.fill")
+                        .customFont(.title3, weight: .medium)
+
+                    Text("Metre")
+                        .customFont(.footnote)
                 }
-                .padding()
-                .background(Material.ultraThin)
-                .clipShape(.capsule)
-                .alignView(to: .leading)
-                .padding(30)
             }
+            .padding()
+            .glassEffect()
+            .alignView(to: .leading)
+            .padding(30)
             
             HStack {
                 GlassButton(text: "Back", style: .secondary) {
@@ -521,25 +496,13 @@ struct ContentView: View {
             
             HStack {
                 if let url = csvURL {
-                    if #available(iOS 26.0, *) {
-                        ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
-                            Label("Export CSV", systemImage: "square.and.arrow.up")
-                                .customFont(.title3, weight: .medium)
-                                .padding(.vertical, 5)
-                                .padding(.horizontal, 20)
-                        }
-                        .buttonStyle(.glassProminent)
-                    } else {
-                        ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
-                            Label("Export CSV", systemImage: "square.and.arrow.up")
-                                .customFont(.title3, weight: .medium)
-                                .foregroundStyle(.white)
-                                .padding(.vertical, 10)
-                                .padding(.horizontal, 25)
-                                .background(.accent.gradient)
-                                .cornerRadius(15, corners: .allCorners)
-                        }
+                    ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
+                        Label("Export CSV", systemImage: "square.and.arrow.up")
+                            .customFont(.title3, weight: .medium)
+                            .padding(.vertical, 5)
+                            .padding(.horizontal, 20)
                     }
+                    .buttonStyle(.glassProminent)
                 } else {
                     // Only reachable if writing the temp file failed.
                     GlassButton(text: "Retry Export") {
