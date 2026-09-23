@@ -8,7 +8,7 @@
 import Foundation
 
 enum Step: CaseIterable, Identifiable {
-    case idle, chooseAngle, determineAngle, standby, measuring, completed
+    case idle, chooseAngle, determineAngle, standby, countdown, measuring, completed
     
     var id: Self { self }
     
@@ -22,6 +22,8 @@ enum Step: CaseIterable, Identifiable {
             return "Determine the Angle"
         case .standby:
             return "Attach Your iPhone to the Cart"
+        case .countdown:
+            return "Get Ready"
         case .measuring:
             return "Collect Data"
         case .completed:
@@ -39,6 +41,8 @@ enum Step: CaseIterable, Identifiable {
             return "Step 2"
         case .standby:
             return "Step 3"
+        case .countdown:
+            return "Step 4"
         case .measuring:
             return "Step 4"
         case .completed:
@@ -56,6 +60,8 @@ enum Step: CaseIterable, Identifiable {
             return "Measure and determine the slope of your track so it matches your desired slope."
         case .standby:
             return "Make sure your iPhone's camera is facing the front of the cart."
+        case .countdown:
+            return "Hold the cart still. Release it when the countdown ends and recording begins."
         case .measuring:
             return "Accelab is recording the motion of your cart as it travels down the track."
         case .completed:

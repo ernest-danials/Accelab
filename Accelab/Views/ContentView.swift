@@ -11,8 +11,10 @@ struct ContentView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(MeasuringManager.self) private var measuringManager: MeasuringManager
     @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var currentStep: Step = .idle
+    @State private var countdownValue: Int = 3
     
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
     @State private var isShowingDeviceOrientationNotValidDisclaimer: Bool = false
@@ -21,7 +23,7 @@ struct ContentView: View {
     @State private var desiredAngle: Double = 1.0
     @State private var capturedAngle: Double? = nil
     
-    @State private var isShowingConfirmatoinDialogToGoBackInChooseAngleView: Bool = false
+    @State private var isShowingConfirmationDialogToGoBackInChooseAngleView: Bool = false
     @State private var isShowingConfirmationDialogToGoBackInMeasuringView: Bool = false
     @State private var isShowingConfirmationDialogToExitInCompletedView: Bool = false
     
@@ -43,23 +45,44 @@ struct ContentView: View {
                 determineAngleView.setUpForDeviceOrientationNotValidDisclaimer(isShowing: isShowingDeviceOrientationNotValidDisclaimer)
             case .standby:
                 standbyView
+            case .countdown:
+                countdownView
             case .measuring:
                 measuringView
             case .completed:
                 completedView
             }
         }
-        .background((angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle) && currentStep == .determineAngle) ? .green3.opacity(0.5) : .clear)
+        // Check the step first so the body only observes `currentAngle` while determining the angle.
+        .background((currentStep == .determineAngle && isAngleReadyToCapture) ? .green3.opacity(0.5) : .clear)
         .onDeviceRotation { newOrientation in
-            if newOrientation.isValidInterfaceOrientation {
-                angleManager.start()
-                withAnimation {
+            withAnimation {
+                if newOrientation.isValidInterfaceOrientation {
                     self.currentDeviceOrientation = newOrientation
                     self.isShowingDeviceOrientationNotValidDisclaimer = false
+                } else {
+                    self.isShowingDeviceOrientationNotValidDisclaimer = true
                 }
-            } else {
-                angleManager.stop()
-                withAnimation { self.isShowingDeviceOrientationNotValidDisclaimer = true }
+            }
+            updateAngleUpdates()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .background else { return }
+
+            // The app is suspended in the background, so motion updates stop. End the run rather than
+            // integrating across the gap when the app returns.
+            switch currentStep {
+            case .countdown:
+                changeCurrentStep(to: .standby)
+            case .measuring:
+                if measuringManager.splits.isEmpty {
+                    measuringManager.reset()
+                    changeCurrentStep(to: .standby)
+                } else {
+                    finishMeasuring()
+                }
+            default:
+                break
             }
         }
         .fullScreenCover(isPresented: $isShowingSettingsView) {
@@ -187,10 +210,10 @@ struct ContentView: View {
                     if self.desiredAngle == 1.0 {
                         changeCurrentStep(to: .idle)
                     } else {
-                        self.isShowingConfirmatoinDialogToGoBackInChooseAngleView = true
+                        self.isShowingConfirmationDialogToGoBackInChooseAngleView = true
                     }
                 }
-                .confirmationDialog("This will reset the angle you chose and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmatoinDialogToGoBackInChooseAngleView, titleVisibility: .visible) {
+                .confirmationDialog("This will reset the angle you chose and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmationDialogToGoBackInChooseAngleView, titleVisibility: .visible) {
                     Button("Yes, reset and go back", role: .destructive) {
                         self.desiredAngle = 1.0
                         changeCurrentStep(to: .idle)
@@ -198,7 +221,6 @@ struct ContentView: View {
                 }
                 
                 GlassButton(text: "Continue") {
-                    angleManager.start()
                     changeCurrentStep(to: .determineAngle)
                 }
             }
@@ -233,7 +255,7 @@ struct ContentView: View {
 
                     // Fixed reference line (horizontal)
                     Capsule()
-                        .fill(angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle) ? (colorScheme == .dark ? .white : .black) : .accentColor)
+                        .fill(isAngleReadyToCapture ? (colorScheme == .dark ? .white : .black) : .accentColor)
                         .frame(width: 250, height: 4)
                 }
             }
@@ -256,13 +278,11 @@ struct ContentView: View {
             
             HStack {
                 GlassButton(text: "Back", style: .secondary) {
-                    angleManager.stop()
                     self.capturedAngle = nil
                     changeCurrentStep(to: .chooseAngle)
                 }
                 
-                GlassButton(text: "Continue", isDisabled: !angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle)) {
-                    angleManager.stop()
+                GlassButton(text: "Continue", isDisabled: !isAngleReadyToCapture) {
                     self.capturedAngle = angleManager.currentAngle
                     changeCurrentStep(to: .standby)
                 }
@@ -278,11 +298,10 @@ struct ContentView: View {
         ZStack {
             VStack {
                 GlassButton(text: "Begin", textFont: .title) {
-                    changeCurrentStep(to: .measuring)
-                    measuringManager.start()
+                    changeCurrentStep(to: .countdown)
                 }
                 
-                Text("Now that your track is all set, secure your iPhone to your cart and put in on the track. \nTap 'Begin' when you're ready to start recording.")
+                Text("Now that your track is all set, secure your iPhone to your cart and put it on the track. \nTap 'Begin' when you're ready to start recording.")
                     .customFont(.footnote, weight: .medium)
                     .multilineTextAlignment(.center)
                     .frame(width: 300)
@@ -321,12 +340,46 @@ struct ContentView: View {
                 .alignViewVertically(to: .bottom)
             
             GlassButton(text: "Back", style: .secondary) {
-                angleManager.start()
                 changeCurrentStep(to: .determineAngle)
             }
             .alignView(to: .trailing)
             .alignViewVertically(to: .bottom)
             .padding()
+        }
+    }
+    
+    @ViewBuilder
+    private var countdownView: some View {
+        ZStack {
+            Text("\(countdownValue)")
+                .font(.system(size: 120, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .contentTransition(.numericText(countsDown: true))
+                .offset(y: 15)
+            
+            GlassButton(text: "Cancel", style: .secondary) {
+                changeCurrentStep(to: .standby)
+            }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
+        }
+        .task {
+            // Cancelled automatically when the step changes and this view disappears.
+            self.countdownValue = Self.countdownSeconds
+            
+            while self.countdownValue > 0 {
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+                
+                withAnimation { self.countdownValue -= 1 }
+            }
+            
+            measuringManager.start()
+            changeCurrentStep(to: .measuring)
         }
     }
     
@@ -409,9 +462,7 @@ struct ContentView: View {
                 }
                 
                 GlassButton(text: "Done", isDisabled: (measuringManager.splits.isEmpty)) {
-                    measuringManager.stop()
-                    changeCurrentStep(to: .completed)
-                    self.csvURL = writeCSVTempFile(measuringManager.makeCSV())
+                    finishMeasuring()
                 }
             }
             .alignView(to: .trailing)
@@ -490,7 +541,10 @@ struct ContentView: View {
                         }
                     }
                 } else {
-                    ProgressView()
+                    // Only reachable if writing the temp file failed.
+                    GlassButton(text: "Retry Export") {
+                        self.csvURL = writeCSVTempFile(measuringManager.makeCSV())
+                    }
                 }
                 
                 GlassButton(text: "Done", style: .secondary) {
@@ -501,6 +555,8 @@ struct ContentView: View {
                         self.measuringManager.reset()
                         self.desiredAngle = 1.0
                         self.capturedAngle = nil
+                        removeCSVTempFiles()
+                        self.csvURL = nil
                         changeCurrentStep(to: .idle)
                     }
                 }
@@ -541,12 +597,38 @@ struct ContentView: View {
         withAnimation {
             self.currentStep = step
         }
+        
+        updateAngleUpdates()
+        
+        // Keep the screen awake while the phone is on the track, where nobody touches it.
+        UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .standby, .countdown, .measuring].contains(step)
+    }
+    
+    /// Runs angle updates only while determining the angle with the phone held upright.
+    private func updateAngleUpdates() {
+        if currentStep == .determineAngle && !isShowingDeviceOrientationNotValidDisclaimer {
+            angleManager.start()
+        } else {
+            angleManager.stop()
+        }
+    }
+    
+    private func finishMeasuring() {
+        measuringManager.stop()
+        changeCurrentStep(to: .completed)
+        self.csvURL = writeCSVTempFile(measuringManager.makeCSV())
     }
     
     private func writeCSVTempFile(_ csv: String) -> URL? {
-        let stamp = ISO8601DateFormatter().string(from: Date())
+        removeCSVTempFiles()
         
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("accelab-\(stamp).csv")
+        // Avoid ':' (as in ISO 8601), which Finder shows as '/' and Windows rejects in file names.
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd_HH-mm-ss"
+        let stamp = formatter.string(from: Date())
+        
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(Self.csvFilePrefix)\(stamp).csv")
         
         do {
             try csv.write(to: url, atomically: true, encoding: .utf8)
@@ -555,6 +637,22 @@ struct ContentView: View {
             return nil
         }
     }
+    
+    private func removeCSVTempFiles() {
+        let fileManager = FileManager.default
+        guard let files = try? fileManager.contentsOfDirectory(at: fileManager.temporaryDirectory, includingPropertiesForKeys: nil) else { return }
+        
+        for file in files where file.lastPathComponent.hasPrefix(Self.csvFilePrefix) && file.pathExtension == "csv" {
+            try? fileManager.removeItem(at: file)
+        }
+    }
+    
+    private var isAngleReadyToCapture: Bool {
+        !isShowingDeviceOrientationNotValidDisclaimer && angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle)
+    }
+    
+    private static let countdownSeconds = 3
+    private static let csvFilePrefix = "accelab-"
 }
 
 fileprivate extension View {

@@ -1,5 +1,5 @@
 //
-//  ScaleButtonStylke.swift
+//  ScaleButtonStyle.swift
 //  Accelab
 //
 //  Created by Myung Joon Kang on 2025-09-20.

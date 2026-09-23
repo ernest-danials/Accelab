@@ -35,7 +35,7 @@ final class MeasuringManager {
 
     // MARK: - Lifecycle
     func reset() {
-        stop(applyZeroVelocitySnap: false)
+        stop()
         splits.removeAll()
         t0 = 0; lastT = 0
         v = 0; s = 0; lastA = 0
@@ -82,16 +82,10 @@ final class MeasuringManager {
         }
     }
 
-    func stop(applyZeroVelocitySnap: Bool = true) {
+    func stop() {
         guard isRunning else { return }
         motionManager.stopDeviceMotionUpdates()
         isRunning = false
-
-        // Optionally snap terminal velocity to 0 if it's small, to reduce end drift
-        if applyZeroVelocitySnap, let last = splits.last, abs(v) < 0.2 {
-            v = 0
-            splits.append(DistanceSplit(timeElapsed: last.timeElapsed, displacement: s, acceleration: 0))
-        }
     }
 
     // MARK: - Export
