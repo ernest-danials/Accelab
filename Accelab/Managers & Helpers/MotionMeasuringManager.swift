@@ -1,5 +1,5 @@
 //
-//  MeasuringManager.swift
+//  MotionMeasuringManager.swift
 //  Accelab
 //
 //  Created by Myung Joon Kang on 2025-09-21.
@@ -9,13 +9,10 @@ import Foundation
 import Observation
 import CoreMotion
 
+/// Measures distance–time data from the phone's own motion sensors while it rides on the cart.
 @Observable
-final class MeasuringManager {
+final class MotionMeasuringManager {
     private(set) var splits: [DistanceSplit] = []
-
-    // Convenience readouts for the UI
-    var elapsed: TimeInterval { (lastT == 0 ? 0 : lastT - t0) }
-    var distance: Double { s }
 
     // Tunables (can be adjusted from UI if desired)
     var sampleHz: Double = 10.0
@@ -76,9 +73,9 @@ final class MeasuringManager {
             self.lastA = a
             self.lastT = now
 
-            // Store sample (time since start, displacement, along-track accel)
+            // Store sample (time since start, displacement)
             let tRel = now - self.t0
-            self.splits.append(DistanceSplit(timeElapsed: tRel, displacement: sNew, acceleration: a))
+            self.splits.append(DistanceSplit(timeElapsed: tRel, displacement: sNew))
         }
     }
 
@@ -87,22 +84,4 @@ final class MeasuringManager {
         motionManager.stopDeviceMotionUpdates()
         isRunning = false
     }
-
-    // MARK: - Export
-    func makeCSV() -> String {
-        var rows = ["time_s,distance_m"]
-        rows.reserveCapacity(splits.count + 1)
-        for smp in splits {
-            rows.append(String(format: "%.4f,%.5f", smp.timeElapsed, smp.displacement))
-        }
-        return rows.joined(separator: "\n")
-    }
-}
-
-// MARK: - Model
-struct DistanceSplit: Identifiable, Hashable, Sendable {
-    let id = UUID()
-    let timeElapsed: TimeInterval   // seconds since start
-    let displacement: Double         // meters (displacement along track, + down-slope)
-    let acceleration: Double         // m/s^2 along track (optional; useful for checks)
 }
