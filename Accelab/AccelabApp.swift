@@ -11,7 +11,7 @@ import SwiftUI
 struct AccelabApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SensorMethodView()
                 .environment(AngleManager())
                 .environment(MotionMeasuringManager())
         }

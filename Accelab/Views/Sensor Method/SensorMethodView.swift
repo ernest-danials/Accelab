@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-struct ContentView: View {
+struct SensorMethodView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(MotionMeasuringManager.self) private var measuringManager: MotionMeasuringManager
     @Environment(\.scenePhase) private var scenePhase
@@ -177,7 +177,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    SensorMethodView()
         .environment(AngleManager())
         .environment(MotionMeasuringManager())
 }
