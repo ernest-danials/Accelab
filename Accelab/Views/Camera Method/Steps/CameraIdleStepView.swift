@@ -14,7 +14,11 @@ struct CameraIdleStepView: View {
     private static let cartSize: CGFloat = 90
     private static let trackSpacing: CGFloat = 30
     private static let trackThickness: CGFloat = 5
-    private static let lensSize: CGFloat = 66
+    private static let cameraSize: CGFloat = 72
+    private static let cameraCornerRadius: CGFloat = 20
+    /// How far the camera sits from the middle of the cart, so that it overlaps the cart's edge
+    /// without reaching the track.
+    private static let cameraShift = CGSize(width: 40, height: 14)
 
     var body: some View {
         ZStack {
@@ -29,15 +33,15 @@ struct CameraIdleStepView: View {
             .foregroundStyle(Method.camera.color.gradient)
             .rotationEffect(Self.slope)
 
-            // The camera, looking at the cart. Placed over the cart rather than tilted along with it,
-            // because glass loses its shape when it is rotated.
+            // The camera, looking at the cart from beside it. Positioned here rather than tilted along
+            // with the drawing, because glass loses its shape when it is rotated.
             Image(systemName: Method.camera.imageName)
                 .customFont(.title, weight: .medium)
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.white)
-                .frame(width: Self.lensSize, height: Self.lensSize)
-                .glassEffect(.clear, in: .circle)
-                .offset(Self.cartCenterOffset)
+                .foregroundStyle(.primary)
+                .frame(width: Self.cameraSize, height: Self.cameraSize)
+                .glassEffect(.regular, in: .rect(cornerRadius: Self.cameraCornerRadius))
+                .offset(x: Self.cartCenterOffset.width + Self.cameraShift.width, y: Self.cartCenterOffset.height + Self.cameraShift.height)
 
             GlassIconButton(systemImage: "chevron.backward", label: "Change Method", perform: onChangeMethod)
                 .alignView(to: .leading)
