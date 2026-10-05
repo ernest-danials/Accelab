@@ -138,27 +138,6 @@ struct CalibrateStepView: View {
     }
 }
 
-/// A ring with a dot at its centre, for pointing at an exact spot on the clip without covering it.
-struct Reticle: View {
-    let size: CGFloat
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(.black.opacity(0.5), lineWidth: 3.5)
-
-            Circle()
-                .stroke(.yellow, lineWidth: 2)
-
-            Circle()
-                .fill(.yellow)
-                .stroke(.black.opacity(0.5), lineWidth: 0.5)
-                .frame(width: 4, height: 4)
-        }
-        .frame(width: size, height: size)
-    }
-}
-
 /// A marker whose grip sits beside the point it marks, so the finger doesn't cover the point.
 private struct CalibrationHandle: View {
     @Binding var point: CGPoint
