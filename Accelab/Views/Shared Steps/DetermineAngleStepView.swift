@@ -5,6 +5,7 @@
 
 import SwiftUI
 
+// TODO: Add a disclaimer to disable orientation lock
 struct DetermineAngleStepView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(\.colorScheme) private var colorScheme
@@ -17,6 +18,12 @@ struct DetermineAngleStepView: View {
     let onBack: () -> Void
     /// Called with the angle captured at the moment the user continues.
     let onContinue: (Double) -> Void
+
+    /// How long the angle must stay within the margin before the step continues on its own.
+    private static let holdSeconds = 3
+
+    /// Seconds left of the current hold within the margin; `nil` while the angle is outside it.
+    @State private var holdCountdownValue: Int? = nil
 
     var body: some View {
         ZStack {
@@ -63,6 +70,22 @@ struct DetermineAngleStepView: View {
             .alignView(to: .leading)
             .alignViewVertically(to: .bottom)
 
+            if let holdCountdownValue {
+                VStack(spacing: 0) {
+                    Text("\(holdCountdownValue)")
+                        .font(.system(size: 100, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: true))
+
+                    Text("Hold Steady")
+                        .customFont(.headline, weight: .bold)
+                }
+                .padding(.horizontal, 30)
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .top)
+                .transition(.blurReplace)
+            }
+
             GlassEffectContainer {
                 HStack {
                     GlassButton(text: "Back", style: .secondary, perform: onBack)
@@ -75,6 +98,26 @@ struct DetermineAngleStepView: View {
                 .alignViewVertically(to: .bottom)
                 .padding()
             }
+        }
+        // Restarts whenever the angle enters or leaves the margin, so only an unbroken hold continues.
+        .task(id: isAngleReadyToCapture) {
+            withAnimation {
+                self.holdCountdownValue = isAngleReadyToCapture ? Self.holdSeconds : nil
+            }
+
+            guard isAngleReadyToCapture else { return }
+
+            while let value = self.holdCountdownValue, value > 0 {
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+
+                withAnimation { self.holdCountdownValue = value - 1 }
+            }
+
+            onContinue(angleManager.currentAngle)
         }
         .overlay {
             if isShowingDeviceOrientationNotValidDisclaimer {

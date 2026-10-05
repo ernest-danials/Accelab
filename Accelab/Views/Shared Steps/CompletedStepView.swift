@@ -6,7 +6,8 @@
 import SwiftUI
 
 struct CompletedStepView: View {
-    let desiredAngle: Double
+    /// `nil` when the angle steps were skipped.
+    let desiredAngle: Double?
     let capturedAngle: Double?
     let splits: [DistanceSplit]
     let csvURL: URL?
@@ -24,20 +25,29 @@ struct CompletedStepView: View {
                         .customFont(.title3, weight: .bold)
                         .padding(.bottom, 2)
 
-                    Text("Target Angle: \(desiredAngle, specifier: "%.2f")°")
-                        .customFont(.title3, weight: .bold)
-
-                    if let capturedAngle {
-                        Text("Actual Angle: \(capturedAngle, specifier: "%.2f")°")
+                    if let desiredAngle {
+                        Text("Target Angle: \(desiredAngle, specifier: "%.2f")°")
                             .customFont(.title3, weight: .bold)
+
+                        if let capturedAngle {
+                            Text("Actual Angle: \(capturedAngle, specifier: "%.2f")°")
+                                .customFont(.title3, weight: .bold)
+                        } else {
+                            Text("Actual Angle: Error")
+                                .customFont(.title3, weight: .bold)
+                        }
+
+                        Text("Margin: \(abs(desiredAngle - (capturedAngle ?? 0)), specifier: "%.2f")°")
+                            .customFont(.footnote, weight: .medium)
+                            .foregroundStyle(.secondary)
                     } else {
-                        Text("Actual Angle: Error")
+                        Text("Angle Not Measured")
                             .customFont(.title3, weight: .bold)
-                    }
 
-                    Text("Margin: \(abs(desiredAngle - (capturedAngle ?? 0)), specifier: "%.2f")°")
-                        .customFont(.footnote, weight: .medium)
-                        .foregroundStyle(.secondary)
+                        Text("The angle step was skipped.")
+                            .customFont(.footnote, weight: .medium)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Divider()
@@ -63,30 +73,32 @@ struct CompletedStepView: View {
             }
             .offset(y: 15)
 
-            HStack {
-                if let url = csvURL {
-                    ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
-                        Label("Export CSV", systemImage: "square.and.arrow.up")
-                            .customFont(.title3, weight: .medium)
-                            .padding(.vertical, 5)
-                            .padding(.horizontal, 20)
+            GlassEffectContainer {
+                HStack {
+                    if let url = csvURL {
+                        ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
+                            Label("Export CSV", systemImage: "square.and.arrow.up")
+                                .customFont(.title3, weight: .medium)
+                                .padding(.vertical, 5)
+                                .padding(.horizontal, 20)
+                        }
+                        .buttonStyle(.glassProminent)
+                    } else {
+                        // Only reachable if writing the temp file failed.
+                        GlassButton(text: "Retry Export", perform: onRetryExport)
                     }
-                    .buttonStyle(.glassProminent)
-                } else {
-                    // Only reachable if writing the temp file failed.
-                    GlassButton(text: "Retry Export", perform: onRetryExport)
-                }
 
-                GlassButton(text: "Done", style: .secondary) {
-                    self.isShowingConfirmationDialogToExit = true
+                    GlassButton(text: "Done", style: .secondary) {
+                        self.isShowingConfirmationDialogToExit = true
+                    }
+                    .confirmationDialog("This will reset all your data and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmationDialogToExit, titleVisibility: .visible) {
+                        Button("Yes, reset and go back", role: .destructive, action: onExit)
+                    }
                 }
-                .confirmationDialog("This will reset all your data and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmationDialogToExit, titleVisibility: .visible) {
-                    Button("Yes, reset and go back", role: .destructive, action: onExit)
-                }
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .bottom)
+                .padding()
             }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
         }
     }
 }

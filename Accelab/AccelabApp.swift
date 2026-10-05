@@ -18,7 +18,7 @@ struct AccelabApp: App {
             if let currentMethod = methodManager.currentMethod {
                 switch currentMethod {
                 case .camera:
-                    EmptyView()
+                    CameraMethodView()
                 case .sensor:
                     SensorMethodView()
                 }
