@@ -25,6 +25,11 @@ struct VideoViewMapping {
         CGPoint(x: containerSize.width / 2, y: containerSize.height / 2)
     }
 
+    /// The size of the whole frame when it is fitted into the viewer, before any zoom.
+    var fittedSize: CGSize {
+        CGSize(width: videoSize.width * fitScale, height: videoSize.height * fitScale)
+    }
+
     func viewPoint(for videoPoint: CGPoint) -> CGPoint {
         let fittedX = center.x + (videoPoint.x - videoSize.width / 2) * fitScale
         let fittedY = center.y + (videoPoint.y - videoSize.height / 2) * fitScale
@@ -46,9 +51,10 @@ struct VideoViewMapping {
     }
 }
 
-/// A single frame of a clip with a scrubber, frame-step buttons, and pinch-to-zoom.
+/// A single frame of a clip filling the whole screen, with pinch-to-zoom and panning.
 ///
 /// `overlay` is drawn over the frame at a constant size; use the mapping it is given to place things on the clip.
+/// Controls are meant to float above this view, so the frame can be dragged out from under them.
 struct VideoFrameViewer<Overlay: View>: View {
     let scrubber: VideoScrubber
     /// Called with the tapped point on the clip, in pixels of the frame as it is shown.
@@ -61,14 +67,18 @@ struct VideoFrameViewer<Overlay: View>: View {
     @State private var offsetAtGestureStart: CGSize = .zero
 
     private let zoomRange: ClosedRange<CGFloat> = 1...8
+    /// How far, as a fraction of the screen, the frame may be dragged past its edge to clear the controls.
+    private let panAllowance: CGFloat = 0.3
 
     var body: some View {
-        VStack(spacing: 10) {
+        ZStack {
             GeometryReader { geometry in
                 let mapping = VideoViewMapping(videoSize: scrubber.frames?.displaySize ?? CGSize(width: 16, height: 9), containerSize: geometry.size, zoom: zoom, offset: offset)
 
                 ZStack {
                     PlayerLayerView(player: scrubber.player)
+                        .frame(width: mapping.fittedSize.width, height: mapping.fittedSize.height)
+                        .clipShape(.rect(cornerRadius: 24))
                         .scaleEffect(zoom)
                         .offset(offset)
 
@@ -93,52 +103,26 @@ struct VideoFrameViewer<Overlay: View>: View {
                     }
                 }
             }
-            .background(.black)
-            .clipShape(.rect(cornerRadius: 16))
             .coordinateSpace(VideoViewMapping.coordinateSpace)
-            .overlay(alignment: .topTrailing) {
-                if zoom > zoomRange.lowerBound {
-                    Button {
-                        withAnimation(.smooth) { resetZoom() }
-                    } label: {
-                        Image(systemName: "arrow.down.right.and.arrow.up.left")
-                            .customFont(.footnote, weight: .medium)
-                            .padding(2)
-                    }
-                    .buttonStyle(.glass)
-                    .padding(8)
-                    .transition(.blurReplace)
+            .background(.black)
+            .ignoresSafeArea()
+
+            if zoom != 1 || offset != .zero {
+                Button {
+                    withAnimation(.smooth) { resetZoom() }
+                } label: {
+                    Image(systemName: "arrow.down.right.and.arrow.up.left")
+                        .customFont(.subheadline, weight: .medium)
+                        .padding(4)
                 }
+                .buttonStyle(.glass)
+                .environment(\.colorScheme, .dark)
+                .accessibilityLabel("Reset Zoom")
+                .alignView(to: .trailing)
+                .padding()
+                .transition(.blurReplace)
             }
-
-            HStack {
-                stepButton(systemImage: "chevron.backward", byFrames: -1)
-
-                Slider(value: Binding(get: { Double(scrubber.currentFrameIndex) }, set: { scrubber.seek(toFrame: Int($0.rounded())) }), in: 0...Double(max(scrubber.frameCount - 1, 1))) {
-                    Text("Frame")
-                }
-
-                stepButton(systemImage: "chevron.forward", byFrames: 1)
-
-                Text("\(scrubber.currentTime, specifier: "%.2f") s")
-                    .customFont(.subheadline, weight: .medium)
-                    .monospacedDigit()
-                    .frame(width: 70, alignment: .trailing)
-            }
-            .disabled(scrubber.frames == nil)
         }
-    }
-
-    private func stepButton(systemImage: String, byFrames count: Int) -> some View {
-        Button {
-            scrubber.step(byFrames: count)
-        } label: {
-            Image(systemName: systemImage)
-                .customFont(.subheadline, weight: .medium)
-                .padding(4)
-        }
-        .buttonStyle(.glass)
-        .buttonRepeatBehavior(.enabled)
     }
 
     private func magnifyGesture(in size: CGSize) -> some Gesture {
@@ -163,10 +147,10 @@ struct VideoFrameViewer<Overlay: View>: View {
             }
     }
 
-    /// Keeps the zoomed frame covering the viewer, so it can't be dragged out of sight.
+    /// Keeps most of the frame on screen, so it can't be dragged out of sight.
     private func clampedOffset(_ offset: CGSize, in size: CGSize) -> CGSize {
-        let maxX = (zoom - 1) * size.width / 2
-        let maxY = (zoom - 1) * size.height / 2
+        let maxX = ((zoom - 1) / 2 + panAllowance) * size.width
+        let maxY = ((zoom - 1) / 2 + panAllowance) * size.height
         return CGSize(width: min(max(offset.width, -maxX), maxX), height: min(max(offset.height, -maxY), maxY))
     }
 

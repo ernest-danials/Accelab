@@ -19,47 +19,66 @@ struct SetupStepView: View {
 
     // How the clip is filmed decides how accurate the scale is, far more than the tracking does.
     private static let tips: [Tip] = [
-        Tip(systemImage: "iphone.gen3", title: "Keep it still", detail: "Prop your iPhone so it can't move. Don't hold it."),
-        Tip(systemImage: "viewfinder", title: "Face the track", detail: "Square-on, level with the track, aimed at its middle."),
-        Tip(systemImage: "arrow.up.left.and.arrow.down.right", title: "Stand back", detail: "Fit the whole run in the shot with room to spare."),
-        Tip(systemImage: "ruler", title: "Show a known length", detail: "The track's own ruler, or a metre stick lying on it. You'll mark it after recording."),
-        Tip(systemImage: "sun.max", title: "Use good light", detail: "A bright room keeps the moving cart sharp."),
-        Tip(systemImage: "rectangle.dashed", title: "Keep the view clear", detail: "Nothing should pass between the camera and the cart.")
+        Tip(systemImage: "iphone.gen3", title: "Keep it still", detail: "Prop your iPhone. Don't hold it."),
+        Tip(systemImage: "viewfinder", title: "Face the track", detail: "Square-on and level with it."),
+        Tip(systemImage: "arrow.up.left.and.arrow.down.right", title: "Stand back", detail: "Fit the whole run with room to spare."),
+        Tip(systemImage: "ruler", title: "Include a ruler", detail: "The track's scale or a metre stick on it."),
+        Tip(systemImage: "sun.max", title: "Use good light", detail: "A bright room keeps the cart sharp."),
+        Tip(systemImage: "rectangle.dashed", title: "Keep the view clear", detail: "Nothing between camera and cart.")
     ]
 
     var body: some View {
-        ZStack {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 20, alignment: .topLeading), count: 3), alignment: .leading, spacing: 14) {
-                ForEach(Self.tips) { tip in
-                    HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: tip.systemImage)
-                            .customFont(.title3, weight: .medium)
-                            .foregroundStyle(Method.camera.color)
-                            .frame(width: 30)
+        // Rows rather than fixed positions, and the tips scroll, so nothing is cut off on a smaller screen.
+        VStack(alignment: .leading, spacing: 0) {
+            StepTitleView(title: CameraMethodStep.setup.title, subtitle: CameraMethodStep.setup.subtitle, description: CameraMethodStep.setup.description, isProminent: false, isInline: true)
+                .padding([.top, .horizontal], 30)
+                .padding(.bottom, 10)
 
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(tip.title)
-                                .customFont(.subheadline, weight: .bold)
-
-                            Text(tip.detail)
-                                .customFont(.caption)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+            ScrollView {
+                GlassEffectContainer {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 10, alignment: .top)], alignment: .leading, spacing: 10) {
+                        ForEach(Self.tips) { tip in
+                            tipCard(for: tip)
                         }
                     }
                 }
+                .padding(.horizontal, 30)
+                .padding(.vertical, 6)
             }
-            .padding(.horizontal, 30)
-            .offset(y: 20)
+            .scrollBounceBehavior(.basedOnSize)
 
-            HStack {
-                GlassButton(text: "Back", style: .secondary, perform: onBack)
+            GlassEffectContainer {
+                HStack {
+                    GlassButton(text: "Back", style: .secondary, perform: onBack)
 
-                GlassButton(text: "Continue", perform: onContinue)
+                    GlassButton(text: "Continue", perform: onContinue)
+                }
             }
             .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
             .padding()
         }
+    }
+
+    private func tipCard(for tip: Tip) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: tip.systemImage)
+                .customFont(.title3, weight: .medium)
+                .foregroundStyle(Method.camera.color)
+                .frame(width: 30)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tip.title)
+                    .customFont(.subheadline, weight: .bold)
+
+                Text(tip.detail)
+                    .customFont(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .glassEffect(.regular, in: .rect(cornerRadius: 18))
     }
 }

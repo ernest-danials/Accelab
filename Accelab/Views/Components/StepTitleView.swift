@@ -5,17 +5,28 @@
 
 import SwiftUI
 
-/// The title block drawn in the top-leading corner of every step of a method.
+/// The title block of a step of a method, drawn in the top-leading corner unless it is inline.
 struct StepTitleView: View {
     let title: String
     let subtitle: String
     let description: String
     /// Uses the larger home-screen styling, as on a method's idle step.
     let isProminent: Bool
-    /// Narrows the block on steps that draw their own content beside it.
-    var isCompact: Bool = false
+    /// Leaves positioning to the step, for steps that lay themselves out around the title.
+    var isInline: Bool = false
 
     var body: some View {
+        if isInline {
+            content
+        } else {
+            content
+                .alignView(to: .leading)
+                .alignViewVertically(to: .top)
+                .padding(30)
+        }
+    }
+
+    private var content: some View {
         VStack(alignment: .leading) {
             if !subtitle.isEmpty {
                 Text(subtitle)
@@ -33,11 +44,8 @@ struct StepTitleView: View {
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
-                    .frame(maxWidth: (isProminent || isCompact) ? 280 : nil, alignment: .leading)
+                    .frame(maxWidth: isProminent ? 280 : nil, alignment: .leading)
             }
         }
-        .alignView(to: .leading)
-        .alignViewVertically(to: .top)
-        .padding(30)
     }
 }

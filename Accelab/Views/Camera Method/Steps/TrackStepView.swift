@@ -23,6 +23,9 @@ struct TrackStepView: View {
     private static let minimumPointCount = 3
     /// A smaller box gives the tracker too little to hold on to.
     private static let minimumBoxSide: CGFloat = 20
+    /// Trail markers closer together than this on screen are skipped, which keeps the trail readable
+    /// and the number of glass shapes small.
+    private static let minimumTrailMarkerSpacing: CGFloat = 14
 
     private enum Mode {
         case marking, drawingBox, tracking
@@ -35,56 +38,50 @@ struct TrackStepView: View {
 
         ZStack {
             VideoFrameViewer(scrubber: scrubber, onTap: onTap) { mapping in
-                ForEach(points) { point in
-                    let isCurrent = point.frameIndex == currentFrameIndex
-
-                    Circle()
-                        .fill(color(for: point, isCurrent: isCurrent))
-                        .stroke(.black.opacity(0.5), lineWidth: 1)
-                        .frame(width: isCurrent ? 12 : 6, height: isCurrent ? 12 : 6)
-                        .position(mapping.viewPoint(for: point.position))
+                // No blending distance, so neighbouring markers stay separate beads instead of merging.
+                GlassEffectContainer(spacing: 0) {
+                    ZStack {
+                        ForEach(trailPoints(currentFrameIndex: currentFrameIndex, mapping: mapping)) { point in
+                            trailMarker(for: point)
+                                .position(mapping.viewPoint(for: point.position))
+                        }
+                    }
                 }
                 .allowsHitTesting(false)
+
+                if let currentPoint = points.first(where: { $0.frameIndex == currentFrameIndex }) {
+                    // Not glass, which would bend the very spot being checked.
+                    Reticle(size: 22)
+                        .position(mapping.viewPoint(for: currentPoint.position))
+                        .allowsHitTesting(false)
+                }
 
                 if mode == .drawingBox {
                     boxDrawingLayer(mapping: mapping)
                 }
             }
-            .containerRelativeFrame(.horizontal) { width, _ in width * 0.6 }
-            .padding(.top)
-            .padding(.bottom, 70)
-            .alignView(to: .trailing)
 
-            VStack(alignment: .leading, spacing: 8) {
-                switch mode {
-                case .marking:
-                    markingControls
-                case .drawingBox:
-                    boxControls
-                case .tracking:
-                    trackingControls
+            VideoStepLayout(step: .track) {
+                GlassEffectContainer {
+                    VStack(alignment: .trailing, spacing: 8) {
+                        switch mode {
+                        case .marking:
+                            markingControls
+                        case .drawingBox:
+                            boxControls
+                        case .tracking:
+                            trackingControls
+                        }
+                    }
                 }
-            }
-            .frame(width: 270, alignment: .leading)
-            .padding(.horizontal, 30)
-            .alignView(to: .leading)
-            .offset(y: 25)
-
-            if mode == .marking {
-                editControls
-                    .alignView(to: .leading)
-                    .alignViewVertically(to: .bottom)
-                    .padding()
-            }
-
-            HStack {
+            } bottom: {
                 GlassButton(text: "Back", style: .secondary, isDisabled: mode == .tracking, perform: onBack)
+
+                VideoScrubBar(scrubber: scrubber)
+                    .disabled(mode == .tracking)
 
                 GlassButton(text: "Finish", isDisabled: mode != .marking || points.count < Self.minimumPointCount, perform: onFinish)
             }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
         }
         .onDisappear {
             trackingTask?.cancel()
@@ -95,60 +92,46 @@ struct TrackStepView: View {
 
     @ViewBuilder
     private var markingControls: some View {
-        Text("^[\(points.count) point](inflect: true) marked")
-            .customFont(.title3, weight: .bold)
-            .contentTransition(.numericText(value: Double(points.count)))
+        HStack(spacing: 8) {
+            Text("^[\(points.count) point](inflect: true)")
+                .customFont(.subheadline, weight: .bold)
+                .monospacedDigit()
+                .contentTransition(.numericText(value: Double(points.count)))
+                .padding(.vertical, 8)
+                .padding(.horizontal, 14)
+                .glassEffect(.regular, in: .capsule)
 
-        if didFailToTrack {
-            Text("Automatic tracking didn't work on this video. Tap the cart to mark it by hand.")
-                .customFont(.caption, weight: .medium)
-                .foregroundStyle(.red)
-        } else if uncertainPointCount > 0 {
-            Text("^[\(uncertainPointCount) point](inflect: true) in orange may be off. Go to its frame and tap the cart to correct it.")
-                .customFont(.caption, weight: .medium)
-                .foregroundStyle(.orange)
-        } else {
-            Text("Start at the frame where the cart is released. Tap the same spot on the cart on each frame, or track it automatically.")
-                .customFont(.caption)
-                .foregroundStyle(.secondary)
-        }
-
-        GlassButton(text: "Track Automatically", textFont: .subheadline) {
-            self.didFailToTrack = false
-            withAnimation { self.mode = .drawingBox }
-        }
-    }
-
-    private var editControls: some View {
-        HStack {
-            GlassButton(text: "Undo", style: .secondary, textFont: .subheadline, isDisabled: points.isEmpty, perform: undo)
-
-            GlassButton(text: "Clear", style: .secondary, textFont: .subheadline, isDisabled: points.isEmpty, perform: clear)
+            GlassButton(text: "Auto-Track", textFont: .subheadline) {
+                self.didFailToTrack = false
+                withAnimation { self.mode = .drawingBox }
+            }
+            .fixedSize()
 
             Menu {
-                Button("Remove Points Before This Frame") { trim(keeping: { $0 >= scrubber.currentFrameIndex }) }
-                Button("Remove Points After This Frame") { trim(keeping: { $0 <= scrubber.currentFrameIndex }) }
+                Button("Undo Last Point", systemImage: "arrow.uturn.backward", action: undo)
+                Button("Remove Points Before This Frame", systemImage: "arrow.left.to.line") { removePoints(keeping: { $0 >= scrubber.currentFrameIndex }) }
+                Button("Remove Points After This Frame", systemImage: "arrow.right.to.line") { removePoints(keeping: { $0 <= scrubber.currentFrameIndex }) }
+                Button("Clear All Points", systemImage: "trash", role: .destructive, action: clear)
             } label: {
-                Text("Trim")
-                    .customFont(.subheadline, weight: .medium)
-                    .padding(.vertical, 5)
-                    .padding(.horizontal, 20)
+                Image(systemName: "ellipsis")
+                    .customFont(.subheadline, weight: .bold)
+                    .frame(width: 22, height: 26)
             }
             .buttonStyle(.glass)
             .disabled(points.isEmpty)
+            .accessibilityLabel("Edit Points")
+        }
+
+        if didFailToTrack {
+            hint("Couldn't follow the cart. Try a tighter box, or tap it by hand.", systemImage: "exclamationmark.triangle.fill", color: .red)
+        } else if uncertainPointCount > 0 {
+            hint("^[\(uncertainPointCount) orange point](inflect: true) may be off. Tap the cart on that frame to fix it.", systemImage: "exclamationmark.circle.fill", color: .orange)
         }
     }
 
     @ViewBuilder
     private var boxControls: some View {
-        Text("Draw a Box")
-            .customFont(.title3, weight: .bold)
-
-        Text("Drag a box tightly around the cart on this frame. Accelab follows it from here to the end of the video.")
-            .customFont(.caption)
-            .foregroundStyle(.secondary)
-
-        HStack {
+        HStack(spacing: 8) {
             GlassButton(text: "Cancel", style: .secondary, textFont: .subheadline) {
                 self.box = nil
                 withAnimation { self.mode = .marking }
@@ -156,24 +139,69 @@ struct TrackStepView: View {
 
             GlassButton(text: "Start", textFont: .subheadline, isDisabled: box == nil, perform: startTracking)
         }
+        .fixedSize()
+
+        hint("Drag a box tightly around the cart on this frame.", systemImage: "rectangle.dashed", color: .primary)
     }
 
     @ViewBuilder
     private var trackingControls: some View {
-        HStack {
-            ProgressView()
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
+                ProgressView()
 
-            Text("Tracking…")
-                .customFont(.title3, weight: .bold)
+                Text("Tracking… ^[\(points.count) point](inflect: true)")
+                    .customFont(.subheadline, weight: .bold)
+                    .monospacedDigit()
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 14)
+            .glassEffect(.regular, in: .capsule)
+
+            GlassButton(text: "Stop", style: .secondary, textFont: .subheadline) {
+                trackingTask?.cancel()
+            }
         }
+        .fixedSize()
+    }
 
-        Text("^[\(points.count) point](inflect: true) so far")
-            .customFont(.caption)
-            .foregroundStyle(.secondary)
-            .contentTransition(.numericText(value: Double(points.count)))
+    private func hint(_ text: LocalizedStringKey, systemImage: String, color: Color) -> some View {
+        Label(text, systemImage: systemImage)
+            .customFont(.caption, weight: .medium)
+            .foregroundStyle(color)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 260, alignment: .leading)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            .transition(.blurReplace)
+    }
 
-        GlassButton(text: "Stop", style: .secondary, textFont: .subheadline) {
-            trackingTask?.cancel()
+    // MARK: - Markers
+
+    private func trailMarker(for point: TrackedPoint) -> some View {
+        Circle()
+            .fill(.clear)
+            .frame(width: 10, height: 10)
+            .glassEffect(.regular.tint(isUncertain(point) ? .orange : .yellow.opacity(0.7)), in: .circle)
+    }
+
+    /// The points drawn as the trail: spaced out on screen, always keeping the uncertain ones.
+    /// The current frame's point is drawn separately.
+    private func trailPoints(currentFrameIndex: Int, mapping: VideoViewMapping) -> [TrackedPoint] {
+        var lastKept: CGPoint? = nil
+
+        return points.filter { point in
+            guard point.frameIndex != currentFrameIndex else { return false }
+
+            let viewPoint = mapping.viewPoint(for: point.position)
+            if let lastKept, hypot(viewPoint.x - lastKept.x, viewPoint.y - lastKept.y) < Self.minimumTrailMarkerSpacing, !isUncertain(point) {
+                return false
+            }
+
+            lastKept = viewPoint
+            return true
         }
     }
 
@@ -200,11 +228,26 @@ struct TrackStepView: View {
                 let topLeft = mapping.viewPoint(for: box.origin)
                 let bottomRight = mapping.viewPoint(for: CGPoint(x: box.maxX, y: box.maxY))
 
-                Rectangle()
+                // The inside is left untouched so the cart stays sharp; only the corners are glass.
+                RoundedRectangle(cornerRadius: 4)
+                    .stroke(.black.opacity(0.5), lineWidth: 3.5)
                     .stroke(.yellow, lineWidth: 2)
-                    .frame(width: bottomRight.x - topLeft.x, height: bottomRight.y - topLeft.y)
+                    .frame(width: max(bottomRight.x - topLeft.x, 1), height: max(bottomRight.y - topLeft.y, 1))
                     .position(x: (topLeft.x + bottomRight.x) / 2, y: (topLeft.y + bottomRight.y) / 2)
                     .allowsHitTesting(false)
+
+                GlassEffectContainer(spacing: 0) {
+                    ZStack {
+                        ForEach([topLeft, CGPoint(x: bottomRight.x, y: topLeft.y), bottomRight, CGPoint(x: topLeft.x, y: bottomRight.y)], id: \.debugDescription) { corner in
+                            Circle()
+                                .fill(.clear)
+                                .frame(width: 12, height: 12)
+                                .glassEffect(.regular.tint(.yellow), in: .circle)
+                                .position(corner)
+                        }
+                    }
+                }
+                .allowsHitTesting(false)
             }
         }
     }
@@ -224,7 +267,7 @@ struct TrackStepView: View {
         scrubber.step(bySeconds: Self.markInterval)
     }
 
-    /// Follows the boxed cart from the current frame on, replacing any points already there.
+    /// Follows the boxed cart from the current frame to the end of the kept range, replacing any points already there.
     private func startTracking() {
         guard let box, let frames = scrubber.frames else { return }
 
@@ -237,7 +280,7 @@ struct TrackStepView: View {
             var trackedCount = 0
 
             do {
-                for try await point in VideoTracker.track(url: scrubber.url, frames: frames, startFrame: startFrame, box: box) {
+                for try await point in VideoTracker.track(url: scrubber.url, frames: frames, startFrame: startFrame, endFrame: scrubber.trimRange.upperBound, box: box) {
                     self.points.append(point)
                     trackedCount += 1
 
@@ -275,15 +318,10 @@ struct TrackStepView: View {
         scrubber.seek(toFrame: last.frameIndex)
     }
 
-    private func trim(keeping shouldKeep: (Int) -> Bool) {
+    private func removePoints(keeping shouldKeep: (Int) -> Bool) {
         withAnimation {
             self.points.removeAll { !shouldKeep($0.frameIndex) }
         }
-    }
-
-    private func color(for point: TrackedPoint, isCurrent: Bool) -> Color {
-        if isCurrent { return .yellow }
-        return isUncertain(point) ? .orange : .white.opacity(0.7)
     }
 
     private func isUncertain(_ point: TrackedPoint) -> Bool {

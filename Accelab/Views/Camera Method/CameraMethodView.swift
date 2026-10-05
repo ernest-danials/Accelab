@@ -31,7 +31,10 @@ struct CameraMethodView: View {
 
     var body: some View {
         ZStack {
-            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle, isCompact: [.record, .calibrate, .track].contains(currentStep))
+            // The steps from setup to tracking lay themselves out around their own title.
+            if !currentStep.drawsOwnTitle {
+                StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle)
+            }
 
             switch currentStep {
             case .idle:
@@ -58,14 +61,23 @@ struct CameraMethodView: View {
             case .record:
                 RecordStepView(captureManager: captureManager, onBack: { changeCurrentStep(to: .setup) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
                     loadClip(at: url)
-                    changeCurrentStep(to: .calibrate)
+                    changeCurrentStep(to: .trim)
                 })
-            case .calibrate:
+            case .trim:
                 if let scrubber {
-                    CalibrateStepView(scrubber: scrubber, calibration: calibration, onBack: {
+                    TrimStepView(scrubber: scrubber, onBack: {
                         discardClip()
                         changeCurrentStep(to: .record)
-                    }, onContinue: { calibration in
+                    }, onContinue: {
+                        // Points marked on an earlier pass may now lie outside the kept range.
+                        self.trackedPoints.removeAll { !scrubber.trimRange.contains($0.frameIndex) }
+                        scrubber.seek(toFrame: scrubber.trimRange.lowerBound)
+                        changeCurrentStep(to: .calibrate)
+                    })
+                }
+            case .calibrate:
+                if let scrubber {
+                    CalibrateStepView(scrubber: scrubber, calibration: calibration, onBack: { changeCurrentStep(to: .trim) }, onContinue: { calibration in
                         self.calibration = calibration
                         changeCurrentStep(to: .track)
                     })
@@ -133,7 +145,7 @@ struct CameraMethodView: View {
             guard let url, currentStep == .record else { return }
 
             loadClip(at: url)
-            changeCurrentStep(to: .calibrate)
+            changeCurrentStep(to: .trim)
         }
     }
 

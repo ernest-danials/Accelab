@@ -19,15 +19,15 @@ nonisolated enum VideoTracker {
         case noVideoTrack, unreadable
     }
 
-    /// Yields the centre of the tracked box for `startFrame` and every frame after it, until the clip ends,
-    /// the object is lost, or the consuming task is cancelled.
+    /// Yields the centre of the tracked box for `startFrame` and every frame after it up to `endFrame`, until
+    /// the object is lost or the consuming task is cancelled.
     ///
     /// - Parameter box: The object on `startFrame`, in pixels of the frame as it is shown.
-    static func track(url: URL, frames: VideoFrameIndex, startFrame: Int, box: CGRect) -> AsyncThrowingStream<TrackedPoint, Error> {
+    static func track(url: URL, frames: VideoFrameIndex, startFrame: Int, endFrame: Int, box: CGRect) -> AsyncThrowingStream<TrackedPoint, Error> {
         AsyncThrowingStream { continuation in
             let task = Task.detached(priority: .userInitiated) {
                 do {
-                    try await run(url: url, frames: frames, startFrame: startFrame, box: box) { continuation.yield($0) }
+                    try await run(url: url, frames: frames, startFrame: startFrame, endFrame: endFrame, box: box) { continuation.yield($0) }
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)
@@ -38,7 +38,7 @@ nonisolated enum VideoTracker {
         }
     }
 
-    private static func run(url: URL, frames: VideoFrameIndex, startFrame: Int, box: CGRect, yield: (TrackedPoint) -> Void) async throws {
+    private static func run(url: URL, frames: VideoFrameIndex, startFrame: Int, endFrame: Int, box: CGRect, yield: (TrackedPoint) -> Void) async throws {
         let asset = AVURLAsset(url: url)
         guard let track = try await asset.loadTracks(withMediaType: .video).first else { throw TrackingError.noVideoTrack }
 
@@ -67,6 +67,7 @@ nonisolated enum VideoTracker {
 
             // Looked up from the timestamp rather than counted, in case the decoder skips or repeats a frame.
             let frameIndex = frames.index(nearest: (time - frames.times[0]).seconds)
+            guard frameIndex <= endFrame else { break }
 
             if frameIndex == startFrame {
                 // The drawn box is the answer for the first frame; the tracker only needs to see it.

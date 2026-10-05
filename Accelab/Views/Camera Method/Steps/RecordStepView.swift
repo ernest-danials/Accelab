@@ -21,44 +21,64 @@ struct RecordStepView: View {
     var body: some View {
         ZStack {
             preview
-                .containerRelativeFrame(.horizontal) { width, _ in width * 0.6 }
-                .padding(.top)
-                .padding(.bottom, 70)
-                .alignView(to: .trailing)
 
-            VStack(alignment: .leading, spacing: 8) {
-                if isImporting {
-                    ProgressView("Importing…")
-                } else {
-                    Text("Already filmed the run?")
-                        .customFont(.caption)
-                        .foregroundStyle(.secondary)
+            VideoStepLayout(step: .record) {
+                VStack(alignment: .trailing, spacing: 8) {
+                    if isImporting {
+                        HStack(spacing: 8) {
+                            ProgressView()
 
-                    PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
-                        Label("Choose from Photos", systemImage: "photo.on.rectangle")
-                            .customFont(.subheadline, weight: .medium)
-                            .padding(.vertical, 5)
-                            .padding(.horizontal, 12)
+                            Text("Importing…")
+                                .customFont(.subheadline, weight: .medium)
+                        }
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 14)
+                        .glassEffect(.regular, in: .capsule)
+                    } else {
+                        PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
+                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
+                                .customFont(.subheadline, weight: .medium)
+                                .padding(.vertical, 5)
+                                .padding(.horizontal, 8)
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(isRecording)
                     }
-                    .buttonStyle(.glass)
-                    .disabled(isRecording)
 
                     if didFailToImport {
-                        Text("That video couldn't be imported. Please try another one.")
+                        Label("That video couldn't be imported.", systemImage: "exclamationmark.triangle.fill")
                             .customFont(.caption, weight: .medium)
                             .foregroundStyle(.red)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .glassEffect(.regular, in: .capsule)
                     }
                 }
-            }
-            .frame(width: 260, alignment: .leading)
-            .padding(.horizontal, 30)
-            .alignView(to: .leading)
-            .offset(y: 30)
+            } bottom: {
+                GlassButton(text: "Back", style: .secondary, isDisabled: isImporting || isRecording, perform: onBack)
 
-            GlassButton(text: "Back", style: .secondary, isDisabled: isImporting || isRecording, perform: onBack)
-                .alignView(to: .trailing)
-                .alignViewVertically(to: .bottom)
-                .padding()
+                Spacer(minLength: 0)
+
+                if let recordingStartDate = captureManager.recordingStartDate {
+                    Label {
+                        Text(recordingStartDate, style: .timer)
+                            .monospacedDigit()
+                    } icon: {
+                        Image(systemName: "circle.fill")
+                            .foregroundStyle(.red)
+                    }
+                    .customFont(.subheadline, weight: .bold)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 14)
+                    .glassEffect(.regular, in: .capsule)
+                }
+            }
+
+            if isCameraRunning {
+                recordButton
+                    .alignView(to: .trailing)
+                    .padding()
+            }
         }
         .onChange(of: selectedItem) { _, newItem in
             guard let newItem else { return }
@@ -85,6 +105,11 @@ struct RecordStepView: View {
         captureManager.state == .recording || captureManager.state == .finishing
     }
 
+    private var isCameraRunning: Bool {
+        [.ready, .recording, .finishing].contains(captureManager.state)
+    }
+
+    /// The camera's picture filling the screen, or the reason there isn't one.
     @ViewBuilder
     private var preview: some View {
         ZStack {
@@ -92,40 +117,26 @@ struct RecordStepView: View {
 
             switch captureManager.state {
             case .ready, .recording, .finishing:
+                // Fitted rather than filled, so what is on screen is exactly what is recorded.
                 CameraPreviewView(captureManager: captureManager)
-
-                recordButton
-                    .alignView(to: .trailing)
-                    .padding()
-
-                if let recordingStartDate = captureManager.recordingStartDate {
-                    Text(recordingStartDate, style: .timer)
-                        .customFont(.subheadline, weight: .bold)
-                        .monospacedDigit()
-                        .foregroundStyle(.white)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 10)
-                        .background(.red, in: .capsule)
-                        .alignViewVertically(to: .top)
-                        .padding()
-                }
+                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                    .clipShape(.rect(cornerRadius: 24))
             case .unauthorized:
-                unavailableMessage("Accelab needs camera access to record the run.", systemImage: "video.slash") {
-                    Button("Open Settings") {
+                unavailableMessage("Accelab needs camera access to record the run.") {
+                    GlassButton(text: "Open Settings", style: .secondary, textFont: .subheadline) {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
                     }
-                    .buttonStyle(.glass)
                 }
             case .unavailable:
-                unavailableMessage("The camera isn't available. Choose a video from Photos instead.", systemImage: "video.slash") { EmptyView() }
+                unavailableMessage("The camera isn't available. Choose a video from Photos instead.") { EmptyView() }
             case .idle, .starting:
                 ProgressView()
                     .tint(.white)
             }
         }
-        .clipShape(.rect(cornerRadius: 16))
+        .ignoresSafeArea()
     }
 
     private var recordButton: some View {
@@ -136,30 +147,27 @@ struct RecordStepView: View {
                 onRecord()
             }
         } label: {
-            ZStack {
-                Circle()
-                    .stroke(.white, lineWidth: 4)
-                    .frame(width: 62, height: 62)
-
-                RoundedRectangle(cornerRadius: captureManager.state == .recording ? 6 : 25)
-                    .fill(.red)
-                    .frame(width: captureManager.state == .recording ? 26 : 50, height: captureManager.state == .recording ? 26 : 50)
-            }
-            .animation(.smooth(duration: 0.2), value: captureManager.state == .recording)
+            RoundedRectangle(cornerRadius: captureManager.state == .recording ? 7 : 26)
+                .fill(.red)
+                .frame(width: captureManager.state == .recording ? 26 : 52, height: captureManager.state == .recording ? 26 : 52)
+                .frame(width: 68, height: 68)
+                .animation(.smooth(duration: 0.2), value: captureManager.state == .recording)
         }
         .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
         .disabled(captureManager.state == .finishing)
         .accessibilityLabel(captureManager.state == .recording ? "Stop Recording" : "Record")
     }
 
-    private func unavailableMessage<Action: View>(_ text: String, systemImage: String, @ViewBuilder action: () -> Action) -> some View {
+    private func unavailableMessage<Action: View>(_ text: String, @ViewBuilder action: () -> Action) -> some View {
         VStack(spacing: 10) {
-            Image(systemName: systemImage)
+            Image(systemName: "video.slash")
                 .customFont(.title, weight: .medium)
 
             Text(text)
                 .customFont(.subheadline, weight: .medium)
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: 280)
 
             action()
         }

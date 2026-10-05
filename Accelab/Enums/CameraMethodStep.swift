@@ -6,9 +6,14 @@
 import Foundation
 
 enum CameraMethodStep: CaseIterable, Identifiable {
-    case idle, chooseAngle, determineAngle, setup, record, calibrate, track, completed
+    case idle, chooseAngle, determineAngle, setup, record, trim, calibrate, track, completed
 
     var id: Self { self }
+
+    /// Steps that lay themselves out around their own title rather than under the shared one.
+    var drawsOwnTitle: Bool {
+        [.setup, .record, .trim, .calibrate, .track].contains(self)
+    }
 
     var title: String {
         switch self {
@@ -22,6 +27,8 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Set Up Your Shot"
         case .record:
             return "Record the Run"
+        case .trim:
+            return "Trim the Video"
         case .calibrate:
             return "Mark a Known Length"
         case .track:
@@ -43,10 +50,12 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Step 3"
         case .record:
             return "Step 4"
-        case .calibrate:
+        case .trim:
             return "Step 5"
-        case .track:
+        case .calibrate:
             return "Step 6"
+        case .track:
+            return "Step 7"
         case .completed:
             return ""
         }
@@ -64,10 +73,12 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Prop your iPhone so it faces the track square-on, with a known length visible along the track."
         case .record:
             return "Start recording, release the cart, and stop once it reaches the end of the track."
+        case .trim:
+            return "Keep only the run, from the release to the end of the track."
         case .calibrate:
             return "Drag the two markers onto the ends of the known length and enter how long it is."
         case .track:
-            return "Mark where the cart is so Accelab can follow it through the video."
+            return "Start at the release. Tap the same spot on the cart on each frame, or track it automatically."
         case .completed:
             return "Your lab data is ready for analysis! Make sure to save it before exiting."
         }
