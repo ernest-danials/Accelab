@@ -13,6 +13,7 @@ import simd
 final class AngleManager {
     var currentAngle: Double = 0.0
     var rawAngle: Double = 0.0  // 0..180°, used for visual quadrant/anchor logic
+    var isFlat: Bool = false    // lying face up/down, where the slope of the long edge can't be read
     
     private let motionManager = CMMotionManager()
     private var lpAngle: Double = 0
@@ -29,6 +30,14 @@ final class AngleManager {
             // Gravity vector
             let g = motion.gravity
             let gravity = simd_double3(g.x, g.y, g.z)
+
+            // Detect lying flat from gravity rather than `UIDevice.orientation`, which stops updating under
+            // orientation lock. The two thresholds keep the state from flickering at the boundary.
+            let flatness = abs(simd_normalize(gravity).z)
+            if self.isFlat ? flatness < 0.8 : flatness > 0.9 {
+                withAnimation { self.isFlat.toggle() }
+            }
+            guard !self.isFlat else { return }
 
             // Angle between gravity (vertical) and device Y-axis (long edge)
             let deviceY = simd_double3(0, 1, 0)

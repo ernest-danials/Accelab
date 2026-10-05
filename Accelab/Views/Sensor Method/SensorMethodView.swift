@@ -16,7 +16,6 @@ struct SensorMethodView: View {
     @State private var currentStep: SensorMethodStep = .idle
 
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
-    @State private var isShowingDeviceOrientationNotValidDisclaimer: Bool = false
 
     @AppStorage(AppStorageKey.marginOfErrorForAngle.rawValue) private var marginOfErrorForAngle: Double = 0.1
     @State private var desiredAngle: Double = ChooseAngleStepView.defaultAngle
@@ -54,15 +53,8 @@ struct SensorMethodView: View {
         // Check the step first so the body only observes `currentAngle` while determining the angle.
         .background((currentStep == .determineAngle && isAngleReadyToCapture) ? .green3.opacity(0.5) : .clear)
         .onDeviceRotation { newOrientation in
-            withAnimation {
-                if newOrientation.isValidInterfaceOrientation {
-                    self.currentDeviceOrientation = newOrientation
-                    self.isShowingDeviceOrientationNotValidDisclaimer = false
-                } else {
-                    self.isShowingDeviceOrientationNotValidDisclaimer = true
-                }
-            }
-            updateAngleUpdates()
+            guard newOrientation.isLandscape else { return }
+            withAnimation { self.currentDeviceOrientation = newOrientation }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .background else { return }
@@ -122,9 +114,9 @@ struct SensorMethodView: View {
         UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .standby, .countdown, .measuring].contains(step)
     }
 
-    /// Runs angle updates only while determining the angle with the phone held upright.
+    /// Runs angle updates only while determining the angle.
     private func updateAngleUpdates() {
-        if currentStep == .determineAngle && !isShowingDeviceOrientationNotValidDisclaimer {
+        if currentStep == .determineAngle {
             angleManager.start()
         } else {
             angleManager.stop()
@@ -162,6 +154,11 @@ struct SensorMethodView: View {
 
     private func exportCSV() {
         self.csvURL = CSVExporter.writeTempFile(for: measuringManager.splits)
+    }
+
+    /// The angle can't be read while the phone is lying flat.
+    private var isShowingDeviceOrientationNotValidDisclaimer: Bool {
+        angleManager.isFlat
     }
 
     private var isAngleReadyToCapture: Bool {
