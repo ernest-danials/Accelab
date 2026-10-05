@@ -25,7 +25,7 @@ struct SensorMethodView: View {
 
     var body: some View {
         ZStack {
-            stepTitleView(for: currentStep)
+            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle)
 
             switch currentStep {
             case .idle:
@@ -74,33 +74,6 @@ struct SensorMethodView: View {
                 break
             }
         }
-    }
-
-    @ViewBuilder
-    private func stepTitleView(for step: SensorMethodStep) -> some View {
-        VStack(alignment: .leading) {
-            if !step.subtitle.isEmpty {
-                Text(step.subtitle)
-                    .customFont(step == .idle ? .title3 : .subheadline)
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
-            }
-
-            Text(step.title)
-                .customFont(step == .idle ? .largeTitle : .title3, weight: .bold)
-                .contentTransition(.numericText())
-
-            if !step.description.isEmpty {
-                Text(step.description)
-                    .customFont(.footnote)
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
-                    .frame(maxWidth: step == .idle ? 280 : nil, alignment: .leading)
-            }
-        }
-        .alignView(to: .leading)
-        .alignViewVertically(to: .top)
-        .padding(30)
     }
 
     private func changeCurrentStep(to step: SensorMethodStep) {

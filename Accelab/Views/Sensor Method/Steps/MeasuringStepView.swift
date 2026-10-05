@@ -54,19 +54,21 @@ struct MeasuringStepView: View {
             .alignView(to: .leading)
             .padding(30)
 
-            HStack {
-                GlassButton(text: "Back", style: .secondary) {
-                    self.isShowingConfirmationDialogToGoBack = true
-                }
-                .confirmationDialog("This will reset all the collected data. Are you sure?", isPresented: $isShowingConfirmationDialogToGoBack, titleVisibility: .visible) {
-                    Button("Yes, reset and go back", role: .destructive, action: onDiscard)
-                }
+            GlassEffectContainer {
+                HStack {
+                    GlassButton(text: "Back", style: .secondary) {
+                        self.isShowingConfirmationDialogToGoBack = true
+                    }
+                    .confirmationDialog("This will reset all the collected data. Are you sure?", isPresented: $isShowingConfirmationDialogToGoBack, titleVisibility: .visible) {
+                        Button("Yes, reset and go back", role: .destructive, action: onDiscard)
+                    }
 
-                GlassButton(text: "Done", isDisabled: splits.isEmpty, perform: onDone)
+                    GlassButton(text: "Done", isDisabled: splits.isEmpty, perform: onDone)
+                }
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .bottom)
+                .padding()
             }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
         }
     }
 }

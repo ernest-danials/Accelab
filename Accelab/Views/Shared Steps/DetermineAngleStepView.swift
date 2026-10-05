@@ -63,16 +63,18 @@ struct DetermineAngleStepView: View {
             .alignView(to: .leading)
             .alignViewVertically(to: .bottom)
 
-            HStack {
-                GlassButton(text: "Back", style: .secondary, perform: onBack)
+            GlassEffectContainer {
+                HStack {
+                    GlassButton(text: "Back", style: .secondary, perform: onBack)
 
-                GlassButton(text: "Continue", isDisabled: !isAngleReadyToCapture) {
-                    onContinue(angleManager.currentAngle)
+                    GlassButton(text: "Continue", isDisabled: !isAngleReadyToCapture) {
+                        onContinue(angleManager.currentAngle)
+                    }
                 }
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .bottom)
+                .padding()
             }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
         }
         .overlay {
             if isShowingDeviceOrientationNotValidDisclaimer {
