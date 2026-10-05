@@ -100,17 +100,20 @@ struct CalibrateStepView: View {
         let lift: CGFloat = 24
         let center = CGPoint(x: (start.x + end.x) / 2 + sin(angle) * lift, y: (start.y + end.y) / 2 - cos(angle) * lift)
 
+        // The glass is given an already-turned shape instead of being turned itself: rotating a glass
+        // effect made it balloon into a lens on a real phone.
         return Text("\(lengthText.isEmpty ? "?" : lengthText) cm")
             .customFont(.caption, weight: .bold)
             .monospacedDigit()
             .lineLimit(1)
+            .minimumScaleFactor(0.7)
             .foregroundStyle(.white)
-            .padding(.vertical, 4)
-            .padding(.horizontal, 9)
-            // A plain backing, not glass: turned glass loses its shape and swallows the line beneath it.
-            .background(.black.opacity(0.6), in: .capsule)
-            .fixedSize()
+            .frame(width: Self.indicatorSize.width - 14, height: Self.indicatorSize.height)
             .rotationEffect(.radians(angle))
+            .frame(width: Self.indicatorSize.width, height: Self.indicatorSize.width)
+            .glassEffect(.regular, in: TurnedCapsule(size: Self.indicatorSize, angle: .radians(angle)))
+            .contentShape(TurnedCapsule(size: Self.indicatorSize, angle: .radians(angle)))
+            .environment(\.colorScheme, .dark)
             .position(center)
             .onTapGesture {
                 withAnimation(.smooth) { self.isChromeHidden = false }
@@ -118,6 +121,8 @@ struct CalibrateStepView: View {
             }
             .accessibilityLabel("Known length, \(lengthText) centimetres")
     }
+
+    private static let indicatorSize = CGSize(width: 78, height: 26)
 
     private var lengthField: some View {
         HStack(spacing: 8) {
@@ -185,6 +190,17 @@ struct CalibrateStepView: View {
     private var currentCalibration: CameraCalibration? {
         guard let start, let end, let lengthInMeters, !isReferenceTooShort else { return nil }
         return CameraCalibration(start: start, end: end, lengthInMeters: lengthInMeters)
+    }
+}
+
+/// A capsule of a fixed size, turned about the centre of whatever it is drawn in.
+private struct TurnedCapsule: Shape {
+    let size: CGSize
+    let angle: Angle
+
+    func path(in rect: CGRect) -> Path {
+        let capsule = Path(roundedRect: CGRect(x: -size.width / 2, y: -size.height / 2, width: size.width, height: size.height), cornerRadius: size.height / 2)
+        return capsule.applying(CGAffineTransform(rotationAngle: angle.radians)).applying(CGAffineTransform(translationX: rect.midX, y: rect.midY))
     }
 }
 

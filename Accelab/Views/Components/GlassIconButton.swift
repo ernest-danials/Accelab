@@ -34,7 +34,6 @@ struct GlassIconButton: View {
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
-        .opacity(isDisabled ? 0.4 : 1)
         .accessibilityLabel(label)
     }
 }
@@ -44,6 +43,8 @@ struct GlassIconLabel: View {
     let systemImage: String
     var title: String? = nil
     var style: GlassButton.GlassButtonStyle = .secondary
+
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         HStack(spacing: 6) {
@@ -56,12 +57,20 @@ struct GlassIconLabel: View {
                     .lineLimit(1)
             }
         }
-        .foregroundStyle(style == .prominent ? .white : .primary)
+        // Disabled is shown in the content and the glass itself rather than with opacity, which glass
+        // inside a `GlassEffectContainer` ignores.
+        .foregroundStyle(isEnabled ? (style == .prominent ? AnyShapeStyle(.white) : AnyShapeStyle(.primary)) : AnyShapeStyle(.tertiary))
         .padding(.horizontal, title == nil ? 0 : 16)
         .frame(minWidth: GlassIconButton.height)
         .frame(height: GlassIconButton.height)
         .contentShape(.capsule)
-        .glassEffect(style == .prominent ? .regular.tint(.accentColor).interactive() : .regular.interactive(), in: .capsule)
+        .glassEffect(glass, in: .capsule)
         .fixedSize()
+    }
+
+    /// Tinted and responsive to touch only while enabled, so a disabled button neither looks nor feels pressable.
+    private var glass: Glass {
+        guard isEnabled else { return .regular }
+        return style == .prominent ? .regular.tint(.accentColor).interactive() : .regular.interactive()
     }
 }

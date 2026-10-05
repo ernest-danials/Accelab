@@ -54,7 +54,7 @@ struct TrackStepView: View {
     var body: some View {
         // Read here rather than inside the overlay, so the highlight follows the scrubber.
         let currentFrameIndex = scrubber.currentFrameIndex
-        let isChromeHidden = isChromeHidden && (mode == .choosing || mode == .viewing)
+        let isChromeHidden = isChromeHidden && (mode == .choosing || mode == .viewing || mode == .drawingBox)
 
         ZStack {
             VideoFrameViewer(scrubber: scrubber, onTap: handleTap) { mapping in
@@ -77,13 +77,13 @@ struct TrackStepView: View {
                 }
 
                 if mode == .drawingBox {
-                    TrackingBoxEditor(box: $box, mapping: mapping)
+                    TrackingBoxEditor(box: $box, mapping: mapping, onTapOutside: toggleChrome)
                 }
             }
 
             if mode == .choosing {
+                // The choice is the step's whole point until it is made, so it stays when the controls are hidden.
                 methodChooser
-                    .hiddenWithChrome(isChromeHidden)
                     .transition(.blurReplace)
             }
 
@@ -116,6 +116,10 @@ struct TrackStepView: View {
                 }
                 .hiddenWithChrome(isChromeHidden)
             }
+        }
+        .onChange(of: mode) {
+            // A new mode has new controls to show, so it never starts with them hidden.
+            withAnimation(.smooth) { self.isChromeHidden = false }
         }
         .onDisappear {
             trackingTask?.cancel()
@@ -194,16 +198,11 @@ struct TrackStepView: View {
 
     @ViewBuilder
     private var boxControls: some View {
-        GlassIconButton(systemImage: "xmark", label: "Cancel") {
+        // Titled, because a bare ✕ beside the box read as "delete the box" rather than "leave this mode".
+        GlassIconButton(systemImage: "xmark", title: "Cancel", label: "Cancel Automatic Tracking") {
             self.box = nil
             self.didFailToTrack = false
             withAnimation { self.mode = points.isEmpty ? .choosing : .viewing }
-        }
-
-        if box != nil {
-            GlassIconButton(systemImage: "arrow.counterclockwise", label: "Draw the Box Again") {
-                withAnimation { self.box = nil }
-            }
         }
 
         GlassIconButton(systemImage: "play.fill", title: "Start", label: "Start Tracking", style: .prominent, isDisabled: box == nil, perform: startTracking)
@@ -313,8 +312,8 @@ struct TrackStepView: View {
         let isOnVideo = scrubber.frames.map { CGRect(origin: .zero, size: $0.displaySize).contains(position) } ?? false
 
         switch mode {
-        case .choosing, .viewing:
-            withAnimation(.smooth) { self.isChromeHidden.toggle() }
+        case .choosing, .viewing, .drawingBox:
+            toggleChrome()
         case .marking:
             if isOnVideo {
                 mark(at: position)
@@ -325,9 +324,13 @@ struct TrackStepView: View {
                 mark(at: position)
                 goToNextUncertainPoint()
             }
-        case .drawingBox, .tracking:
+        case .tracking:
             break
         }
+    }
+
+    private func toggleChrome() {
+        withAnimation(.smooth) { self.isChromeHidden.toggle() }
     }
 
     /// Marks the cart on the current frame, replacing an earlier mark on it.
@@ -458,6 +461,8 @@ struct TrackStepView: View {
 private struct TrackingBoxEditor: View {
     @Binding var box: CGRect?
     let mapping: VideoViewMapping
+    /// Called for a tap that isn't on the box, before one has been drawn.
+    let onTapOutside: () -> Void
 
     /// The box as it was when the current move or resize began.
     @State private var boxAtDragStart: CGRect? = nil
@@ -531,6 +536,7 @@ private struct TrackingBoxEditor: View {
             // Nothing drawn yet: a drag anywhere draws the box.
             Color.clear
                 .contentShape(.rect)
+                .onTapGesture(perform: onTapOutside)
                 .gesture(
                     DragGesture(minimumDistance: 4, coordinateSpace: VideoViewMapping.coordinateSpace)
                         .onChanged { value in
