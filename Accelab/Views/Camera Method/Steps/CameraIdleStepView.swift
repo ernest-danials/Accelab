@@ -14,11 +14,11 @@ struct CameraIdleStepView: View {
     private static let cartSize: CGFloat = 90
     private static let trackSpacing: CGFloat = 30
     private static let trackThickness: CGFloat = 5
-    private static let cameraSize: CGFloat = 72
-    private static let cameraCornerRadius: CGFloat = 20
+    private static let cameraSize: CGFloat = 84
+    private static let cameraCornerRadius: CGFloat = 24
     /// How far the camera sits from the middle of the cart, so that it overlaps the cart's edge
     /// without reaching the track.
-    private static let cameraShift = CGSize(width: 40, height: 14)
+    private static let cameraShift = CGSize(width: 46, height: 6)
 
     var body: some View {
         ZStack {
