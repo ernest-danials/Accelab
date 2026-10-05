@@ -35,7 +35,7 @@ struct CameraMethodView: View {
 
             switch currentStep {
             case .idle:
-                idleStepView
+                CameraIdleStepView(onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: .chooseAngle) })
             case .chooseAngle:
                 ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: {
                     self.isAngleSkipped = false
@@ -87,35 +87,10 @@ struct CameraMethodView: View {
         .onChange(of: scenePhase) { _, newPhase in
             // The camera can't run in the background, so a recording in progress is thrown away
             // rather than kept with a gap in it.
-            updateCaptureSession()
+            updateCaptureSession(scenePhase: newPhase)
         }
         .onDisappear {
             captureManager.stop()
-        }
-    }
-
-    private var idleStepView: some View {
-        ZStack {
-            Image(systemName: Method.camera.imageName)
-                .customFont(.largeTitle, weight: .medium)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Method.camera.color)
-                .frame(width: 90, height: 90)
-                .glassEffect(.regular, in: .circle)
-
-            GlassButton(text: "Change Method", style: .secondary) {
-                methodManager.changeMethod(to: nil)
-            }
-            .alignView(to: .leading)
-            .alignViewVertically(to: .bottom)
-            .padding()
-
-            GlassButton(text: "Start") {
-                changeCurrentStep(to: .chooseAngle)
-            }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
         }
     }
 
@@ -125,7 +100,7 @@ struct CameraMethodView: View {
         }
 
         updateAngleUpdates()
-        updateCaptureSession()
+        updateCaptureSession(scenePhase: scenePhase)
 
         // Keep the screen awake while the phone is on the track or filming, where nobody touches it.
         UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .record].contains(step)
@@ -141,7 +116,7 @@ struct CameraMethodView: View {
     }
 
     /// Runs the camera only while the record step is on screen and the app is in the foreground.
-    private func updateCaptureSession() {
+    private func updateCaptureSession(scenePhase: ScenePhase) {
         if currentStep == .record && scenePhase != .background {
             Task { await captureManager.start() }
         } else {
@@ -150,6 +125,7 @@ struct CameraMethodView: View {
     }
 
     // MARK: - Run lifecycle
+    // The only places that talk to the camera and the clip.
 
     private func startRecording() {
         captureManager.startRecording { url in

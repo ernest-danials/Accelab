@@ -57,7 +57,6 @@ nonisolated enum VideoTracker {
         let request = VNTrackObjectRequest(detectedObjectObservation: VNDetectedObjectObservation(boundingBox: visionRect(for: box, displaySize: displaySize)))
         request.trackingLevel = .accurate
 
-        var frameIndex = startFrame
         while let sampleBuffer = output.copyNextSampleBuffer() {
             try Task.checkCancellation()
             guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { continue }
@@ -65,7 +64,9 @@ nonisolated enum VideoTracker {
             // The reader may hand back frames from before the requested start.
             let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
             guard time >= frames.times[startFrame] else { continue }
-            guard frameIndex < frames.count else { break }
+
+            // Looked up from the timestamp rather than counted, in case the decoder skips or repeats a frame.
+            let frameIndex = frames.index(nearest: (time - frames.times[0]).seconds)
 
             if frameIndex == startFrame {
                 // The drawn box is the answer for the first frame; the tracker only needs to see it.
@@ -81,8 +82,6 @@ nonisolated enum VideoTracker {
                 yield(TrackedPoint(frameIndex: frameIndex, position: displayPoint(forCenterOf: observation.boundingBox, displaySize: displaySize), isManual: false, confidence: confidence))
                 request.inputObservation = observation
             }
-
-            frameIndex += 1
         }
     }
 
