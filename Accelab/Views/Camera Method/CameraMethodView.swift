@@ -9,7 +9,9 @@ import SwiftUI
 
 struct CameraMethodView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
+    @Environment(CameraCaptureManager.self) private var captureManager: CameraCaptureManager
     @Environment(MethodManager.self) private var methodManager: MethodManager
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var currentStep: CameraMethodStep = .idle
 
@@ -29,7 +31,7 @@ struct CameraMethodView: View {
 
     var body: some View {
         ZStack {
-            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle, isCompact: [.calibrate, .track].contains(currentStep))
+            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle, isCompact: [.record, .calibrate, .track].contains(currentStep))
 
             switch currentStep {
             case .idle:
@@ -52,9 +54,9 @@ struct CameraMethodView: View {
                     changeCurrentStep(to: .setup)
                 })
             case .setup:
-                placeholderStepView(onBack: { changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle) }, onContinue: { changeCurrentStep(to: .record) })
+                SetupStepView(onBack: { changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle) }, onContinue: { changeCurrentStep(to: .record) })
             case .record:
-                RecordStepView(onBack: { changeCurrentStep(to: .setup) }, onImported: { url in
+                RecordStepView(captureManager: captureManager, onBack: { changeCurrentStep(to: .setup) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
                     loadClip(at: url)
                     changeCurrentStep(to: .calibrate)
                 })
@@ -81,6 +83,14 @@ struct CameraMethodView: View {
         .onDeviceRotation { newOrientation in
             guard newOrientation.isLandscape else { return }
             withAnimation { self.currentDeviceOrientation = newOrientation }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            // The camera can't run in the background, so a recording in progress is thrown away
+            // rather than kept with a gap in it.
+            updateCaptureSession()
+        }
+        .onDisappear {
+            captureManager.stop()
         }
     }
 
@@ -109,32 +119,13 @@ struct CameraMethodView: View {
         }
     }
 
-    // TODO: Replace with a real view per step in `Views/Camera Method/Steps/`.
-    private func placeholderStepView(onBack: @escaping () -> Void, onContinue: @escaping () -> Void) -> some View {
-        ZStack {
-            Text("Coming Soon")
-                .customFont(.title3, weight: .bold)
-                .foregroundStyle(.secondary)
-
-            GlassEffectContainer {
-                HStack {
-                    GlassButton(text: "Back", style: .secondary, perform: onBack)
-
-                    GlassButton(text: "Continue", perform: onContinue)
-                }
-                .alignView(to: .trailing)
-                .alignViewVertically(to: .bottom)
-                .padding()
-            }
-        }
-    }
-
     private func changeCurrentStep(to step: CameraMethodStep) {
         withAnimation {
             self.currentStep = step
         }
 
         updateAngleUpdates()
+        updateCaptureSession()
 
         // Keep the screen awake while the phone is on the track or filming, where nobody touches it.
         UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .record].contains(step)
@@ -149,7 +140,26 @@ struct CameraMethodView: View {
         }
     }
 
+    /// Runs the camera only while the record step is on screen and the app is in the foreground.
+    private func updateCaptureSession() {
+        if currentStep == .record && scenePhase != .background {
+            Task { await captureManager.start() }
+        } else {
+            captureManager.stop()
+        }
+    }
+
     // MARK: - Run lifecycle
+
+    private func startRecording() {
+        captureManager.startRecording { url in
+            // `nil` when the recording was discarded or couldn't be saved.
+            guard let url, currentStep == .record else { return }
+
+            loadClip(at: url)
+            changeCurrentStep(to: .calibrate)
+        }
+    }
 
     private func loadClip(at url: URL) {
         let scrubber = VideoScrubber(url: url)
@@ -205,5 +215,6 @@ struct CameraMethodView: View {
 #Preview {
     CameraMethodView()
         .environment(AngleManager())
+        .environment(CameraCaptureManager())
         .environment(MethodManager())
 }

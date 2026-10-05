@@ -11,6 +11,7 @@ import SwiftUI
 struct AccelabApp: App {
     @State private var angleManager: AngleManager = .init()
     @State private var motionMeasuringManager: MotionMeasuringManager = .init()
+    @State private var cameraCaptureManager: CameraCaptureManager = .init()
     @State private var methodManager: MethodManager = .init()
     
     var body: some Scene {
@@ -28,6 +29,7 @@ struct AccelabApp: App {
         }
         .environment(angleManager)
         .environment(motionMeasuringManager)
+        .environment(cameraCaptureManager)
         .environment(methodManager)
     }
 }

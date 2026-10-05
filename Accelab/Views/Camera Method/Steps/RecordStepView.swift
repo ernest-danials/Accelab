@@ -7,7 +7,10 @@ import PhotosUI
 import SwiftUI
 
 struct RecordStepView: View {
+    let captureManager: CameraCaptureManager
     let onBack: () -> Void
+    let onRecord: () -> Void
+    let onStop: () -> Void
     /// Called with the clip's location in the temporary directory once it has been copied there.
     let onImported: (URL) -> Void
 
@@ -17,34 +20,42 @@ struct RecordStepView: View {
 
     var body: some View {
         ZStack {
-            VStack(spacing: 12) {
+            preview
+                .containerRelativeFrame(.horizontal) { width, _ in width * 0.6 }
+                .padding(.top)
+                .padding(.bottom, 70)
+                .alignView(to: .trailing)
+
+            VStack(alignment: .leading, spacing: 8) {
                 if isImporting {
                     ProgressView("Importing…")
                 } else {
+                    Text("Already filmed the run?")
+                        .customFont(.caption)
+                        .foregroundStyle(.secondary)
+
                     PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
                         Label("Choose from Photos", systemImage: "photo.on.rectangle")
-                            .customFont(.title3, weight: .medium)
+                            .customFont(.subheadline, weight: .medium)
                             .padding(.vertical, 5)
-                            .padding(.horizontal, 20)
+                            .padding(.horizontal, 12)
                     }
-                    .buttonStyle(.glassProminent)
-
-                    // TODO: Record in the app instead, with focus, exposure and frame rate locked.
-                    Text("Recording in Accelab is coming soon. For now, film the run with the Camera app and choose the video here.")
-                        .customFont(.footnote, weight: .medium)
-                        .multilineTextAlignment(.center)
-                        .frame(width: 300)
+                    .buttonStyle(.glass)
+                    .disabled(isRecording)
 
                     if didFailToImport {
                         Text("That video couldn't be imported. Please try another one.")
-                            .customFont(.footnote, weight: .medium)
+                            .customFont(.caption, weight: .medium)
                             .foregroundStyle(.red)
                     }
                 }
             }
-            .offset(y: 15)
+            .frame(width: 260, alignment: .leading)
+            .padding(.horizontal, 30)
+            .alignView(to: .leading)
+            .offset(y: 30)
 
-            GlassButton(text: "Back", style: .secondary, isDisabled: isImporting, perform: onBack)
+            GlassButton(text: "Back", style: .secondary, isDisabled: isImporting || isRecording, perform: onBack)
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)
                 .padding()
@@ -68,5 +79,91 @@ struct RecordStepView: View {
                 }
             }
         }
+    }
+
+    private var isRecording: Bool {
+        captureManager.state == .recording || captureManager.state == .finishing
+    }
+
+    @ViewBuilder
+    private var preview: some View {
+        ZStack {
+            Color.black
+
+            switch captureManager.state {
+            case .ready, .recording, .finishing:
+                CameraPreviewView(captureManager: captureManager)
+
+                recordButton
+                    .alignView(to: .trailing)
+                    .padding()
+
+                if let recordingStartDate = captureManager.recordingStartDate {
+                    Text(recordingStartDate, style: .timer)
+                        .customFont(.subheadline, weight: .bold)
+                        .monospacedDigit()
+                        .foregroundStyle(.white)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 10)
+                        .background(.red, in: .capsule)
+                        .alignViewVertically(to: .top)
+                        .padding()
+                }
+            case .unauthorized:
+                unavailableMessage("Accelab needs camera access to record the run.", systemImage: "video.slash") {
+                    Button("Open Settings") {
+                        if let url = URL(string: UIApplication.openSettingsURLString) {
+                            UIApplication.shared.open(url)
+                        }
+                    }
+                    .buttonStyle(.glass)
+                }
+            case .unavailable:
+                unavailableMessage("The camera isn't available. Choose a video from Photos instead.", systemImage: "video.slash") { EmptyView() }
+            case .idle, .starting:
+                ProgressView()
+                    .tint(.white)
+            }
+        }
+        .clipShape(.rect(cornerRadius: 16))
+    }
+
+    private var recordButton: some View {
+        Button {
+            if captureManager.state == .recording {
+                onStop()
+            } else {
+                onRecord()
+            }
+        } label: {
+            ZStack {
+                Circle()
+                    .stroke(.white, lineWidth: 4)
+                    .frame(width: 62, height: 62)
+
+                RoundedRectangle(cornerRadius: captureManager.state == .recording ? 6 : 25)
+                    .fill(.red)
+                    .frame(width: captureManager.state == .recording ? 26 : 50, height: captureManager.state == .recording ? 26 : 50)
+            }
+            .animation(.smooth(duration: 0.2), value: captureManager.state == .recording)
+        }
+        .buttonStyle(.plain)
+        .disabled(captureManager.state == .finishing)
+        .accessibilityLabel(captureManager.state == .recording ? "Stop Recording" : "Record")
+    }
+
+    private func unavailableMessage<Action: View>(_ text: String, systemImage: String, @ViewBuilder action: () -> Action) -> some View {
+        VStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .customFont(.title, weight: .medium)
+
+            Text(text)
+                .customFont(.subheadline, weight: .medium)
+                .multilineTextAlignment(.center)
+
+            action()
+        }
+        .foregroundStyle(.white)
+        .padding()
     }
 }
