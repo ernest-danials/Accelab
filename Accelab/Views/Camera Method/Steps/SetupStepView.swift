@@ -18,11 +18,12 @@ struct SetupStepView: View {
     }
 
     // How the clip is filmed decides how accurate the scale is, far more than the tracking does.
+    // The reference object (a ruler or anything of known length) must be as far from the camera as the cart, or it gives the wrong scale.
     private static let tips: [Tip] = [
         Tip(systemImage: "iphone.gen3", title: "Keep it still", detail: "Prop your iPhone. Don't hold it."),
         Tip(systemImage: "viewfinder", title: "Face the track", detail: "Square-on and level with it."),
         Tip(systemImage: "arrow.up.left.and.arrow.down.right", title: "Stand back", detail: "Fit the whole run with room to spare."),
-        Tip(systemImage: "ruler", title: "Include a ruler", detail: "The track's scale or a metre stick on it."),
+        Tip(systemImage: "ruler", title: "Include something to measure", detail: "Any object of known length works, at the same distance from the camera as the cart."),
         Tip(systemImage: "sun.max", title: "Use good light", detail: "A bright room keeps the cart sharp."),
         Tip(systemImage: "rectangle.dashed", title: "Keep the view clear", detail: "Nothing between camera and cart.")
     ]
