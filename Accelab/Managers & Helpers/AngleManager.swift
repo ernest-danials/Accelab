@@ -14,9 +14,6 @@ final class AngleManager {
     var currentAngle: Double = 0.0
     var rawAngle: Double = 0.0  // 0..180°, used for visual quadrant/anchor logic
     var isFlat: Bool = false    // lying face up/down, where the slope of the long edge can't be read
-    /// Which way round the phone is actually being held, read from gravity. `nil` while it can't be told.
-    /// Unlike the interface's side, this keeps following the phone when Orientation Lock is on.
-    var physicalLandscapeSide: UIDeviceOrientation? = nil
     
     private let motionManager = CMMotionManager()
     private var lpAngle: Double = 0
@@ -40,14 +37,6 @@ final class AngleManager {
             if self.isFlat ? flatness < 0.8 : flatness > 0.9 {
                 withAnimation { self.isFlat.toggle() }
             }
-            // In landscape the short edge (device X) is the one pointing up or down, so the sign of gravity
-            // along it tells the two landscape sides apart.
-            let sideways = simd_normalize(gravity).x
-            let physicalSide: UIDeviceOrientation? = (self.isFlat || abs(sideways) < 0.3) ? nil : (sideways < 0 ? .landscapeLeft : .landscapeRight)
-            if physicalSide != self.physicalLandscapeSide {
-                self.physicalLandscapeSide = physicalSide
-            }
-
             guard !self.isFlat else { return }
 
             // Angle between gravity (vertical) and device Y-axis (long edge)
@@ -78,7 +67,6 @@ final class AngleManager {
         guard isRunning else { return }
         motionManager.stopDeviceMotionUpdates()
         isRunning = false
-        physicalLandscapeSide = nil
     }
     
     func isCurrentAngleWithinMargin(targetAngle: Double, margin: Double) -> Bool {

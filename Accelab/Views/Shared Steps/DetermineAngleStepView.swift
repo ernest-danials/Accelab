@@ -5,6 +5,7 @@
 
 import SwiftUI
 
+// TODO: Add a disclaimer to disable orientation lock
 struct DetermineAngleStepView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(\.colorScheme) private var colorScheme
@@ -23,13 +24,6 @@ struct DetermineAngleStepView: View {
 
     /// Seconds left of the current hold within the margin; `nil` while the angle is outside it.
     @State private var holdCountdownValue: Int? = nil
-
-    /// Set once the phone has been held the other way round from the interface for a while. The interface
-    /// normally turns with the phone, so this only lasts when Orientation Lock is stopping it.
-    @State private var isOrientationLockSuspected: Bool = false
-
-    /// A normal rotation is briefly out of step with the phone too, so the notice waits this long.
-    private static let orientationLockNoticeDelay: TimeInterval = 2
 
     var body: some View {
         ZStack {
@@ -62,12 +56,6 @@ struct DetermineAngleStepView: View {
             .offset(y: 20)
 
             VStack(alignment: .leading) {
-                if isOrientationLockSuspected {
-                    orientationLockNotice
-                        .padding(.bottom, 4)
-                        .transition(.blurReplace)
-                }
-
                 Label("Target Angle: \(desiredAngle, specifier: "%.2f")°", systemImage: "angle")
                     .customFont(.subheadline, weight: .medium)
 
@@ -136,19 +124,6 @@ struct DetermineAngleStepView: View {
             Haptics.success()
             onContinue(angleManager.currentAngle)
         }
-        // The angle itself is unaffected by an upside-down interface, so this only informs; nothing is blocked.
-        .task(id: isInterfaceUpsideDown) {
-            guard isInterfaceUpsideDown else {
-                withAnimation { self.isOrientationLockSuspected = false }
-                return
-            }
-
-            try? await Task.sleep(for: .seconds(Self.orientationLockNoticeDelay))
-            guard !Task.isCancelled else { return }
-
-            withAnimation { self.isOrientationLockSuspected = true }
-            Haptics.warning()
-        }
         .overlay {
             if isShowingDeviceOrientationNotValidDisclaimer {
                 ContentUnavailableView("iPhone isn't upright", systemImage: "iphone.badge.exclamationmark", description: Text("Accelab can't measure the angle while your iPhone is lying flat. Hold it upright in landscape to continue."))
@@ -157,24 +132,5 @@ struct DetermineAngleStepView: View {
                     .background(Material.ultraThin)
             }
         }
-    }
-
-    /// `true` while the interface is drawn the other way up from how the phone is being held.
-    private var isInterfaceUpsideDown: Bool {
-        guard let physicalSide = angleManager.physicalLandscapeSide, let currentDeviceOrientation else { return false }
-        return physicalSide != currentDeviceOrientation
-    }
-
-    private var orientationLockNotice: some View {
-        Label("Screen upside down? Turn off Orientation Lock in Control Center.", systemImage: "lock.rotation")
-            .customFont(.footnote, weight: .medium)
-            .foregroundStyle(.yellow)
-            // Turned the right way up for whoever is reading it, since everything else on screen is upside
-            // down to them. Only the text is turned: a capsule looks the same either way, and glass loses
-            // its shape when it is rotated.
-            .rotationEffect(.degrees(180))
-            .padding(.vertical, 8)
-            .padding(.horizontal, 14)
-            .glassEffect(.regular, in: .capsule)
     }
 }
