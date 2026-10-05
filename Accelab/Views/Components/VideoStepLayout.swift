@@ -35,9 +35,10 @@ struct VideoStepLayout<TopTrailing: View, Bottom: View>: View {
 
             Spacer(minLength: 0)
 
-            // Not in a glass container: glass inside one ignores opacity, and these controls fade.
-            HStack(spacing: 10) {
-                bottom
+            GlassEffectContainer {
+                HStack(spacing: 10) {
+                    bottom
+                }
             }
         }
         .padding()
@@ -65,11 +66,18 @@ struct VideoStepLayout<TopTrailing: View, Bottom: View>: View {
     }
 }
 
+extension EnvironmentValues {
+    /// `true` on controls that are hidden with the rest. Glass controls read it and dissolve their own
+    /// glass, because glass inside a `GlassEffectContainer` ignores the opacity of the view around it.
+    @Entry var isHiddenWithChrome: Bool = false
+}
+
 extension View {
     /// Fades a control out with the rest of the controls, keeping its place in the layout.
     func hiddenWithChrome(_ isHidden: Bool) -> some View {
         self
             .opacity(isHidden ? 0 : 1)
+            .environment(\.isHiddenWithChrome, isHidden)
             .allowsHitTesting(!isHidden)
             .accessibilityHidden(isHidden)
     }
@@ -79,13 +87,16 @@ extension View {
 struct GlassStatusLabel<Content: View>: View {
     @ViewBuilder var content: Content
 
+    @Environment(\.isHiddenWithChrome) private var isHiddenWithChrome
+
     var body: some View {
         content
             .customFont(.subheadline, weight: .semibold)
             .monospacedDigit()
             .lineLimit(1)
+            .opacity(isHiddenWithChrome ? 0 : 1)
             .padding(.horizontal, 14)
             .frame(height: GlassIconButton.height)
-            .glassEffect(.regular, in: .capsule)
+            .glassEffect(isHiddenWithChrome ? .identity : .regular, in: .capsule)
     }
 }

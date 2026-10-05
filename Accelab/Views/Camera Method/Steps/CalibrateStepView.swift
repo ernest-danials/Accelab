@@ -131,9 +131,20 @@ struct CalibrateStepView: View {
                 .foregroundStyle(.secondary)
 
             TextField("100", text: $lengthText)
-                // Not the decimal pad, which has no return key to submit with.
-                .keyboardType(.numbersAndPunctuation)
-                .submitLabel(.done)
+                .keyboardType(.decimalPad)
+                // The decimal pad has no return key, so Done sits in a bar above it.
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+
+                        Button("Done") {
+                            Haptics.tap()
+                            self.isLengthFieldFocused = false
+                        }
+                        .fontWeight(.semibold)
+                    }
+                }
+                // Reached only from a hardware keyboard's return key.
                 .onSubmit {
                     self.isLengthFieldFocused = false
                 }

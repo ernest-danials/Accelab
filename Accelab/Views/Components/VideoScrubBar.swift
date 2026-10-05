@@ -18,6 +18,8 @@ struct VideoScrubBar: View {
     private static let handleWidth: CGFloat = 14
     private static let barHeight: CGFloat = 32
 
+    @Environment(\.isHiddenWithChrome) private var isHiddenWithChrome
+
     var body: some View {
         HStack(spacing: 6) {
             stepButton(systemImage: "chevron.backward", byFrames: -1)
@@ -81,9 +83,10 @@ struct VideoScrubBar: View {
                 .monospacedDigit()
                 .frame(minWidth: 56, alignment: .trailing)
         }
+        .opacity(isHiddenWithChrome ? 0 : 1)
         .padding(.horizontal, 12)
         .frame(height: GlassIconButton.height)
-        .glassEffect(.regular, in: .capsule)
+        .glassEffect(isHiddenWithChrome ? .identity : .regular, in: .capsule)
         .disabled(scrubber.frames == nil)
     }
 

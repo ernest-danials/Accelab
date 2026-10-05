@@ -48,6 +48,7 @@ struct GlassIconLabel: View {
     var style: GlassButton.GlassButtonStyle = .secondary
 
     @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.isHiddenWithChrome) private var isHiddenWithChrome
 
     var body: some View {
         HStack(spacing: 6) {
@@ -63,6 +64,7 @@ struct GlassIconLabel: View {
         // Disabled is shown in the content and the glass itself rather than with opacity, which glass
         // inside a `GlassEffectContainer` ignores.
         .foregroundStyle(isEnabled ? (style == .prominent ? AnyShapeStyle(.white) : AnyShapeStyle(.primary)) : AnyShapeStyle(.tertiary))
+        .opacity(isHiddenWithChrome ? 0 : 1)
         .padding(.horizontal, title == nil ? 0 : 16)
         .frame(minWidth: GlassIconButton.height)
         .frame(height: GlassIconButton.height)
@@ -73,6 +75,7 @@ struct GlassIconLabel: View {
 
     /// Tinted and responsive to touch only while enabled, so a disabled button neither looks nor feels pressable.
     private var glass: Glass {
+        guard !isHiddenWithChrome else { return .identity }
         guard isEnabled else { return .regular }
         return style == .prominent ? .regular.tint(.accentColor).interactive() : .regular.interactive()
     }
