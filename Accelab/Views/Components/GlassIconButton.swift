@@ -54,11 +54,13 @@ struct GlassIconLabel: View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
                 .customFont(.body, weight: .semibold)
+                .contentTransition(.symbolEffect(.replace))
 
             if let title {
                 Text(title)
                     .customFont(.subheadline, weight: .semibold)
                     .lineLimit(1)
+                    .contentTransition(.numericText())
             }
         }
         // Disabled is shown in the content and the glass itself rather than with opacity, which glass

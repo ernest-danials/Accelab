@@ -28,6 +28,12 @@ struct CameraMethodView: View {
 
     @State private var splits: [DistanceSplit] = []
     @State private var csvURL: URL? = nil
+    @State private var desmosURL: URL? = nil
+    /// `true` when the clip came from Photos, which already has it, so it isn't offered for export.
+    @State private var isClipImported: Bool = false
+    @State private var videoURL: URL? = nil
+    @State private var photoURL: URL? = nil
+    @State private var photoTask: Task<Void, Never>? = nil
 
     var body: some View {
         ZStack {
@@ -60,7 +66,7 @@ struct CameraMethodView: View {
                 SetupStepView(onBack: { changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle) }, onContinue: { changeCurrentStep(to: .record) })
             case .record:
                 RecordStepView(captureManager: captureManager, onBack: { changeCurrentStep(to: .setup) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
-                    loadClip(at: url)
+                    loadClip(at: url, isImported: true)
                     changeCurrentStep(to: .trim)
                 })
             case .trim:
@@ -89,7 +95,7 @@ struct CameraMethodView: View {
             case .analyze:
                 AnalyzeStepView(splits: splits, onFinished: { changeCurrentStep(to: .completed) })
             case .completed:
-                CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits, csvURL: csvURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
+                CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits, csvURL: csvURL, desmosURL: desmosURL, offersMedia: true, videoURL: videoURL, photoURL: photoURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
         }
         // Check the step first so the body only observes `currentAngle` while determining the angle.
@@ -146,14 +152,15 @@ struct CameraMethodView: View {
             // `nil` when the recording was discarded or couldn't be saved.
             guard let url, currentStep == .record else { return }
 
-            loadClip(at: url)
+            loadClip(at: url, isImported: false)
             changeCurrentStep(to: .trim)
         }
     }
 
-    private func loadClip(at url: URL) {
+    private func loadClip(at url: URL, isImported: Bool) {
         let scrubber = VideoScrubber(url: url)
         self.scrubber = scrubber
+        self.isClipImported = isImported
 
         Task {
             await scrubber.load()
@@ -165,6 +172,7 @@ struct CameraMethodView: View {
         self.scrubber = nil
         self.calibration = nil
         self.trackedPoints = []
+        self.isClipImported = false
         VideoClipStore.removeTempFiles()
     }
 
@@ -174,6 +182,7 @@ struct CameraMethodView: View {
         }
 
         exportCSV()
+        exportMedia()
         changeCurrentStep(to: .analyze)
     }
 
@@ -186,10 +195,43 @@ struct CameraMethodView: View {
         self.isAngleSkipped = false
         CSVExporter.removeTempFiles()
         self.csvURL = nil
+        self.desmosURL = nil
+        removeMedia()
     }
 
     private func exportCSV() {
         self.csvURL = CSVExporter.writeTempFile(for: splits)
+        self.desmosURL = CSVExporter.writeDesmosTempFile(for: splits)
+    }
+
+    /// Prepares the clip (only one filmed here) and the photo of the tracked points for sharing.
+    /// The photo is drawn while the analyze step is on screen.
+    private func exportMedia() {
+        removeMedia()
+        guard let scrubber, let frames = scrubber.frames else { return }
+
+        if !isClipImported {
+            self.videoURL = RunMediaExporter.makeVideoFile(from: scrubber.url)
+        }
+
+        let points = trackedPoints
+        self.photoTask = Task {
+            let url = await RunMediaExporter.makePhotoFile(from: scrubber.url, frames: frames, points: points)
+            // Cancelled when the run was reset first, after which nothing would remove the photo.
+            guard !Task.isCancelled else {
+                if let url { try? FileManager.default.removeItem(at: url) }
+                return
+            }
+            self.photoURL = url
+        }
+    }
+
+    private func removeMedia() {
+        photoTask?.cancel()
+        self.photoTask = nil
+        self.videoURL = nil
+        self.photoURL = nil
+        RunMediaExporter.removeTempFiles()
     }
 
     /// The angle can't be read while the phone is lying flat.

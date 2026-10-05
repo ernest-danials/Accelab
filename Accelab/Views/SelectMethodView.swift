@@ -146,7 +146,7 @@ struct SelectMethodView: View {
                         content.offset(x: phase.value * 70)
                     }
                 
-                Text(method.description)
+                description(for: method)
                     .customFont(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -174,6 +174,13 @@ struct SelectMethodView: View {
         .containerRelativeFrame([.horizontal, .vertical])
     }
     
+    /// The method's description, opening with a highlighted "Recommended" for the method the app steers people towards.
+    private func description(for method: Method) -> Text {
+        guard method.isRecommended else { return Text(method.description) }
+
+        return Text("\(Text("Recommended").fontWeight(.medium).foregroundStyle(method.color)) · \(method.description)")
+    }
+
     /// Tracks the swipe continuously: the capsules stretch and shrink with the finger rather than snapping once the page settles.
     private var pageIndicator: some View {
         HStack(spacing: 6) {

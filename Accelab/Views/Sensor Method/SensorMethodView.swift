@@ -20,8 +20,10 @@ struct SensorMethodView: View {
     @AppStorage(AppStorageKey.marginOfErrorForAngle.rawValue) private var marginOfErrorForAngle: Double = 0.1
     @State private var desiredAngle: Double = ChooseAngleStepView.defaultAngle
     @State private var capturedAngle: Double? = nil
+    @State private var isAngleSkipped: Bool = false
 
     @State private var csvURL: URL? = nil
+    @State private var desmosURL: URL? = nil
 
     var body: some View {
         ZStack {
@@ -31,7 +33,14 @@ struct SensorMethodView: View {
             case .idle:
                 IdleStepView(onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: .chooseAngle) })
             case .chooseAngle:
-                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: { changeCurrentStep(to: .determineAngle) })
+                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: {
+                    self.isAngleSkipped = false
+                    changeCurrentStep(to: .determineAngle)
+                }, onSkip: {
+                    self.isAngleSkipped = true
+                    self.capturedAngle = nil
+                    changeCurrentStep(to: .standby)
+                })
             case .determineAngle:
                 DetermineAngleStepView(desiredAngle: desiredAngle, marginOfErrorForAngle: marginOfErrorForAngle, currentDeviceOrientation: currentDeviceOrientation, isAngleReadyToCapture: isAngleReadyToCapture, isShowingDeviceOrientationNotValidDisclaimer: isShowingDeviceOrientationNotValidDisclaimer, onBack: {
                     self.capturedAngle = nil
@@ -41,13 +50,13 @@ struct SensorMethodView: View {
                     changeCurrentStep(to: .standby)
                 })
             case .standby:
-                StandbyStepView(currentDeviceOrientation: currentDeviceOrientation, onBegin: { changeCurrentStep(to: .countdown) }, onBack: { changeCurrentStep(to: .determineAngle) })
+                StandbyStepView(currentDeviceOrientation: currentDeviceOrientation, onBegin: { changeCurrentStep(to: .countdown) }, onBack: { changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle) })
             case .countdown:
                 CountdownStepView(onCancel: { changeCurrentStep(to: .standby) }, onFinished: startMeasuring)
             case .measuring:
                 MeasuringStepView(splits: measuringManager.splits, onDiscard: discardMeasuring, onDone: finishMeasuring)
             case .completed:
-                CompletedStepView(desiredAngle: desiredAngle, capturedAngle: capturedAngle, splits: measuringManager.splits, csvURL: csvURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
+                CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: measuringManager.splits, csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
         }
         // Check the step first so the body only observes `currentAngle` while determining the angle.
@@ -121,12 +130,15 @@ struct SensorMethodView: View {
         measuringManager.reset()
         self.desiredAngle = ChooseAngleStepView.defaultAngle
         self.capturedAngle = nil
+        self.isAngleSkipped = false
         CSVExporter.removeTempFiles()
         self.csvURL = nil
+        self.desmosURL = nil
     }
 
     private func exportCSV() {
         self.csvURL = CSVExporter.writeTempFile(for: measuringManager.splits)
+        self.desmosURL = CSVExporter.writeDesmosTempFile(for: measuringManager.splits)
     }
 
     /// The angle can't be read while the phone is lying flat.

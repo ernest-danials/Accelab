@@ -6,10 +6,21 @@
 import SwiftUI
 
 enum Method: String, CaseIterable, Identifiable {
+    // Camera comes first so the selection screen opens on it.
     case camera = "Camera"
     case sensor = "Sensor"
     
     var id: Self { self }
+    
+    /// The method the selection screen steers people towards.
+    var isRecommended: Bool {
+        switch self {
+        case .camera:
+            return true
+        case .sensor:
+            return false
+        }
+    }
     
     var imageName: String {
         switch self {

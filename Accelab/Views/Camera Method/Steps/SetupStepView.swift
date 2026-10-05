@@ -28,25 +28,31 @@ struct SetupStepView: View {
         Tip(systemImage: "rectangle.dashed", title: "Keep the view clear", detail: "Nothing between camera and cart.")
     ]
 
+    private static let tipsPerRow = 3
+    /// How far a tip's text may shrink to fit its card.
+    private static let minimumTextScale: CGFloat = 0.6
+
     var body: some View {
-        // Rows rather than fixed positions, and the tips scroll, so nothing is cut off on a smaller screen.
+        // Rows rather than fixed positions. The tips share the height between the title and the buttons
+        // equally, and their text shrinks to fit its card, so nothing is cut off on a smaller screen.
         VStack(alignment: .leading, spacing: 0) {
             StepTitleView(title: CameraMethodStep.setup.title, subtitle: CameraMethodStep.setup.subtitle, description: CameraMethodStep.setup.description, isProminent: false, isInline: true)
                 .padding([.top, .horizontal], 30)
                 .padding(.bottom, 10)
 
-            ScrollView {
-                GlassEffectContainer {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 10, alignment: .top)], alignment: .leading, spacing: 10) {
-                        ForEach(Self.tips) { tip in
-                            tipCard(for: tip)
+            GlassEffectContainer {
+                VStack(spacing: 10) {
+                    ForEach(Array(stride(from: 0, to: Self.tips.count, by: Self.tipsPerRow)), id: \.self) { start in
+                        HStack(spacing: 10) {
+                            ForEach(Self.tips[start..<min(start + Self.tipsPerRow, Self.tips.count)]) { tip in
+                                tipCard(for: tip)
+                            }
                         }
                     }
                 }
-                .padding(.horizontal, 30)
-                .padding(.vertical, 6)
             }
-            .scrollBounceBehavior(.basedOnSize)
+            .padding(.horizontal, 30)
+            .padding(.top, 6)
 
             GlassEffectContainer {
                 HStack {
@@ -58,10 +64,12 @@ struct SetupStepView: View {
             .alignView(to: .trailing)
             .padding()
         }
+        // The cards are sized for ordinary text; much larger text would have to shrink too far to fit.
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
     }
 
     private func tipCard(for tip: Tip) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .center, spacing: 10) {
             Image(systemName: tip.systemImage)
                 .customFont(.title3, weight: .medium)
                 .foregroundStyle(Method.camera.color)
@@ -70,14 +78,15 @@ struct SetupStepView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(tip.title)
                     .customFont(.subheadline, weight: .bold)
+                    .minimumScaleFactor(Self.minimumTextScale)
 
                 Text(tip.detail)
                     .customFont(.caption)
                     .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .minimumScaleFactor(Self.minimumTextScale)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.vertical, 10)
         .padding(.horizontal, 12)
         .glassEffect(.regular, in: .rect(cornerRadius: 18))
