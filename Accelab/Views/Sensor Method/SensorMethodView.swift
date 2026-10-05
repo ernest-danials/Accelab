@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  SensorMethodView.swift
 //  Accelab
 //
 //  Created by Myung Joon Kang on 2025-09-20.
@@ -10,6 +10,7 @@ import SwiftUI
 struct SensorMethodView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(MotionMeasuringManager.self) private var measuringManager: MotionMeasuringManager
+    @Environment(MethodManager.self) private var methodManager: MethodManager
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var currentStep: SensorMethodStep = .idle
@@ -23,16 +24,13 @@ struct SensorMethodView: View {
 
     @State private var csvURL: URL? = nil
 
-    @State private var isShowingSettingsView: Bool = false
-    @State private var isShowingWhatIsAccelabView: Bool = false
-
     var body: some View {
         ZStack {
             stepTitleView(for: currentStep)
 
             switch currentStep {
             case .idle:
-                IdleStepView(onShowWhatIsAccelab: { self.isShowingWhatIsAccelabView = true }, onShowSettings: { self.isShowingSettingsView = true }, onStart: { changeCurrentStep(to: .chooseAngle) })
+                IdleStepView(onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: .chooseAngle) })
             case .chooseAngle:
                 ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: { changeCurrentStep(to: .determineAngle) })
             case .determineAngle:
@@ -84,12 +82,6 @@ struct SensorMethodView: View {
                 break
             }
         }
-        .fullScreenCover(isPresented: $isShowingSettingsView) {
-            SettingsView()
-        }
-        .fullScreenCover(isPresented: $isShowingWhatIsAccelabView) {
-            WhatIsAccelabView()
-        }
     }
 
     @ViewBuilder
@@ -111,6 +103,7 @@ struct SensorMethodView: View {
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
+                    .frame(maxWidth: step == .idle ? 280 : nil, alignment: .leading)
             }
         }
         .alignView(to: .leading)
@@ -180,4 +173,5 @@ struct SensorMethodView: View {
     SensorMethodView()
         .environment(AngleManager())
         .environment(MotionMeasuringManager())
+        .environment(MethodManager())
 }

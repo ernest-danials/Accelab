@@ -16,6 +16,9 @@ struct SelectMethodView: View {
     @State private var isHeaderCollapsed: Bool = false
     @State private var headerExpandTask: Task<Void, Never>? = nil
     
+    @State private var isShowingSettingsView: Bool = false
+    @State private var isShowingWhatIsAccelabView: Bool = false
+    
     var body: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: 0) {
@@ -62,6 +65,24 @@ struct SelectMethodView: View {
         .overlay(alignment: .bottom) {
             pageIndicator
                 .padding(.bottom, 12)
+        }
+        .overlay(alignment: .bottomLeading) {
+            GlassButton(text: "What is Accelab?", style: .secondary, textFont: .subheadline) {
+                self.isShowingWhatIsAccelabView = true
+            }
+            .padding()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            GlassButton(text: "Settings", style: .secondary, textFont: .subheadline) {
+                self.isShowingSettingsView = true
+            }
+            .padding()
+        }
+        .fullScreenCover(isPresented: $isShowingSettingsView) {
+            SettingsView()
+        }
+        .fullScreenCover(isPresented: $isShowingWhatIsAccelabView) {
+            WhatIsAccelabView()
         }
     }
     

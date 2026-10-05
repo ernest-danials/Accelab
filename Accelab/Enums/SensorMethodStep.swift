@@ -15,7 +15,7 @@ enum SensorMethodStep: CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .idle:
-            return "Accelab"
+            return Method.sensor.rawValue
         case .chooseAngle:
             return "Choose the Angle"
         case .determineAngle:
@@ -34,7 +34,7 @@ enum SensorMethodStep: CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .idle:
-            return "Welcome to"
+            return ""
         case .chooseAngle:
             return "Step 1"
         case .determineAngle:
@@ -53,7 +53,7 @@ enum SensorMethodStep: CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .idle:
-            return ""
+            return Method.sensor.description
         case .chooseAngle:
             return "Choose the desired slope of your track."
         case .determineAngle:

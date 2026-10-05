@@ -6,8 +6,7 @@
 import SwiftUI
 
 struct IdleStepView: View {
-    let onShowWhatIsAccelab: () -> Void
-    let onShowSettings: () -> Void
+    let onChangeMethod: () -> Void
     let onStart: () -> Void
 
     var body: some View {
@@ -15,6 +14,13 @@ struct IdleStepView: View {
             VStack(spacing: 30) {
                 Circle()
                     .frame(width: 90, height: 90)
+                    .overlay {
+                        // Counter-rotated so the icon stays upright on the tilted track.
+                        Image(systemName: Method.sensor.imageName)
+                            .customFont(.largeTitle, weight: .medium)
+                            .foregroundStyle(.black.opacity(0.7))
+                            .rotationEffect(.degrees(20))
+                    }
 
                 Capsule()
                     .frame(height: 5)
@@ -22,19 +28,15 @@ struct IdleStepView: View {
             .foregroundStyle(.green2.gradient)
             .rotationEffect(.degrees(-20))
 
-            GlassButton(text: "What is Accelab?", style: .secondary, perform: onShowWhatIsAccelab)
+            GlassButton(text: "Change Method", style: .secondary, perform: onChangeMethod)
                 .alignView(to: .leading)
                 .alignViewVertically(to: .bottom)
                 .padding()
 
-            HStack {
-                GlassButton(text: "Settings", style: .secondary, perform: onShowSettings)
-
-                GlassButton(text: "Start", perform: onStart)
-            }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
+            GlassButton(text: "Start", perform: onStart)
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .bottom)
+                .padding()
         }
     }
 }
