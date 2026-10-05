@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SensorMethodView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(MotionMeasuringManager.self) private var measuringManager: MotionMeasuringManager
     @Environment(MethodManager.self) private var methodManager: MethodManager
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
 
     @State private var currentStep: SensorMethodStep = .idle
 
@@ -24,6 +26,8 @@ struct SensorMethodView: View {
 
     @State private var csvURL: URL? = nil
     @State private var desmosURL: URL? = nil
+    /// The current run in the past runs, once it has finished.
+    @State private var savedRun: SavedRun? = nil
 
     var body: some View {
         ZStack {
@@ -117,6 +121,21 @@ struct SensorMethodView: View {
         measuringManager.stop()
         changeCurrentStep(to: .completed)
         exportCSV()
+        saveRun()
+    }
+
+    /// Keeps the finished run in the past runs. It stays there after `resetRun()`.
+    private func saveRun() {
+        let splits = measuringManager.splits
+        guard !splits.isEmpty else { return }
+
+        if let savedRun {
+            savedRun.update(splits: splits)
+        } else {
+            let run = SavedRun(method: .sensor, desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits)
+            modelContext.insert(run)
+            self.savedRun = run
+        }
     }
 
     /// Throws away the collected data but keeps the angle, so the run can be repeated.
@@ -128,6 +147,7 @@ struct SensorMethodView: View {
     /// Clears everything belonging to the current run: collected data, angles, and exported files.
     private func resetRun() {
         measuringManager.reset()
+        self.savedRun = nil
         self.desiredAngle = ChooseAngleStepView.defaultAngle
         self.capturedAngle = nil
         self.isAngleSkipped = false
@@ -156,4 +176,5 @@ struct SensorMethodView: View {
         .environment(AngleManager())
         .environment(MotionMeasuringManager())
         .environment(MethodManager())
+        .modelContainer(for: SavedRun.self, inMemory: true)
 }

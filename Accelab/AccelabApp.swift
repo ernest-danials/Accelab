@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct AccelabApp: App {
@@ -31,5 +32,6 @@ struct AccelabApp: App {
         .environment(motionMeasuringManager)
         .environment(cameraCaptureManager)
         .environment(methodManager)
+        .modelContainer(for: SavedRun.self)
     }
 }

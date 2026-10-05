@@ -6,12 +6,14 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct CameraMethodView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(CameraCaptureManager.self) private var captureManager: CameraCaptureManager
     @Environment(MethodManager.self) private var methodManager: MethodManager
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
 
     @State private var currentStep: CameraMethodStep = .idle
 
@@ -34,6 +36,8 @@ struct CameraMethodView: View {
     @State private var videoURL: URL? = nil
     @State private var photoURL: URL? = nil
     @State private var photoTask: Task<Void, Never>? = nil
+    /// The current run in the past runs, once it has finished.
+    @State private var savedRun: SavedRun? = nil
 
     var body: some View {
         ZStack {
@@ -182,14 +186,29 @@ struct CameraMethodView: View {
         }
 
         exportCSV()
+        saveRun()
         exportMedia()
         changeCurrentStep(to: .analyze)
+    }
+
+    /// Keeps the finished run in the past runs. It stays there after `resetRun()`; its photo is added by `exportMedia()`.
+    private func saveRun() {
+        guard !splits.isEmpty else { return }
+
+        if let savedRun {
+            savedRun.update(splits: splits)
+        } else {
+            let run = SavedRun(method: .camera, desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits)
+            modelContext.insert(run)
+            self.savedRun = run
+        }
     }
 
     /// Clears everything belonging to the current run: collected data, angles, and exported files.
     private func resetRun() {
         discardClip()
         self.splits = []
+        self.savedRun = nil
         self.desiredAngle = ChooseAngleStepView.defaultAngle
         self.capturedAngle = nil
         self.isAngleSkipped = false
@@ -215,8 +234,13 @@ struct CameraMethodView: View {
         }
 
         let points = trackedPoints
+        let run = savedRun
         self.photoTask = Task {
             let url = await RunMediaExporter.makePhotoFile(from: scrubber.url, frames: frames, points: points)
+            // The saved run keeps the photo even if this run was reset before it was drawn.
+            if let url, let run, !Task.isCancelled || run.photo == nil, let data = try? Data(contentsOf: url) {
+                run.photo = data
+            }
             // Cancelled when the run was reset first, after which nothing would remove the photo.
             guard !Task.isCancelled else {
                 if let url { try? FileManager.default.removeItem(at: url) }
@@ -249,4 +273,5 @@ struct CameraMethodView: View {
         .environment(AngleManager())
         .environment(CameraCaptureManager())
         .environment(MethodManager())
+        .modelContainer(for: SavedRun.self, inMemory: true)
 }

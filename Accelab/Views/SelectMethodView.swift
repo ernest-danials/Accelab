@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SelectMethodView: View {
     @Environment(MethodManager.self) private var methodManager
@@ -18,6 +19,7 @@ struct SelectMethodView: View {
     
     @State private var isShowingSettingsView: Bool = false
     @State private var isShowingWhatIsAccelabView: Bool = false
+    @State private var isShowingPastRunsView: Bool = false
     
     var body: some View {
         ScrollView(.horizontal) {
@@ -62,6 +64,12 @@ struct SelectMethodView: View {
                 .padding(.horizontal, 30)
                 .padding(.top, 20)
         }
+        .overlay(alignment: .topTrailing) {
+            GlassIconButton(systemImage: "clock.arrow.circlepath", title: "Past Runs", label: "Past Runs") {
+                self.isShowingPastRunsView = true
+            }
+            .padding()
+        }
         .overlay(alignment: .bottom) {
             pageIndicator
                 .padding(.bottom, 12)
@@ -84,8 +92,17 @@ struct SelectMethodView: View {
         .fullScreenCover(isPresented: $isShowingWhatIsAccelabView) {
             WhatIsAccelabView()
         }
+        .fullScreenCover(isPresented: $isShowingPastRunsView, onDismiss: removePastRunExports) {
+            PastRunsView()
+        }
     }
     
+    /// Removes the files a past run wrote for sharing. No run is in progress on this screen, so nothing else owns them.
+    private func removePastRunExports() {
+        CSVExporter.removeTempFiles()
+        RunMediaExporter.removeTempFiles()
+    }
+
     /// Collapses into a single compact line as soon as the carousel is scrolled; expands again once it rests on the first page.
     private var header: some View {
         let layout = isHeaderCollapsed ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 6)) : AnyLayout(VStackLayout(alignment: .leading))
@@ -219,4 +236,5 @@ struct SelectMethodView: View {
 #Preview {
     SelectMethodView()
         .environment(MethodManager())
+        .modelContainer(for: SavedRun.self, inMemory: true)
 }

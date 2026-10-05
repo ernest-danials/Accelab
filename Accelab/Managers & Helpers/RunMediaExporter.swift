@@ -66,6 +66,12 @@ nonisolated enum RunMediaExporter {
         return (try? data.write(to: url, options: .atomic)) != nil ? url : nil
     }
 
+    /// Writes the photo kept with a saved run where it can be shared from. Returns `nil` if that failed.
+    static func writePhotoFile(from data: Data) -> URL? {
+        let url = makeTempURL(pathExtension: "jpg")
+        return (try? data.write(to: url, options: .atomic)) != nil ? url : nil
+    }
+
     static func removeTempFiles() {
         let fileManager = FileManager.default
         guard let files = try? fileManager.contentsOfDirectory(at: fileManager.temporaryDirectory, includingPropertiesForKeys: nil) else { return }

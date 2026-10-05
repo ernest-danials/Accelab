@@ -84,7 +84,7 @@ enum CameraMethodStep: CaseIterable, Identifiable {
         case .analyze:
             return "Turning the tracked points into distance and time."
         case .completed:
-            return "Your lab data is ready for analysis! Make sure to save it before exiting."
+            return "Your lab data is ready for analysis! It's saved in Past Runs."
         }
     }
 }

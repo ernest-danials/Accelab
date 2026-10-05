@@ -65,7 +65,7 @@ enum SensorMethodStep: CaseIterable, Identifiable {
         case .measuring:
             return "Accelab is recording the motion of your cart as it travels down the track."
         case .completed:
-            return "Your lab data is ready for analysis! Make sure to save it before exiting."
+            return "Your lab data is ready for analysis! It's saved in Past Runs."
         }
     }
 }
