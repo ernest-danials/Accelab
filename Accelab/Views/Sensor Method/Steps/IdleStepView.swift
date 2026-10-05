@@ -28,6 +28,14 @@ struct IdleStepView: View {
             .foregroundStyle(.green2.gradient)
             .rotationEffect(.degrees(-20))
 
+            // The phone rides on the track and the cart either way round, and with Orientation Lock on the
+            // screen can't turn to follow it. There is no way to read the setting, so this is always shown.
+            GlassStatusLabel {
+                Label("Turn off Orientation Lock before you start", systemImage: "lock.rotation")
+            }
+            .alignViewVertically(to: .bottom)
+            .padding()
+
             GlassIconButton(systemImage: "chevron.backward", label: "Change Method", perform: onChangeMethod)
                 .alignView(to: .leading)
                 .alignViewVertically(to: .bottom)

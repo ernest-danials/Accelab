@@ -5,7 +5,6 @@
 
 import SwiftUI
 
-// TODO: Add a disclaimer to disable orientation lock
 struct DetermineAngleStepView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(\.colorScheme) private var colorScheme
