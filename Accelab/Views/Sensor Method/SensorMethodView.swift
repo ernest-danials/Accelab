@@ -12,7 +12,7 @@ struct SensorMethodView: View {
     @Environment(MotionMeasuringManager.self) private var measuringManager: MotionMeasuringManager
     @Environment(\.scenePhase) private var scenePhase
 
-    @State private var currentStep: Step = .idle
+    @State private var currentStep: SensorMethodStep = .idle
 
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
     @State private var isShowingDeviceOrientationNotValidDisclaimer: Bool = false
@@ -93,7 +93,7 @@ struct SensorMethodView: View {
     }
 
     @ViewBuilder
-    private func stepTitleView(for step: Step) -> some View {
+    private func stepTitleView(for step: SensorMethodStep) -> some View {
         VStack(alignment: .leading) {
             if !step.subtitle.isEmpty {
                 Text(step.subtitle)
@@ -118,7 +118,7 @@ struct SensorMethodView: View {
         .padding(30)
     }
 
-    private func changeCurrentStep(to step: Step) {
+    private func changeCurrentStep(to step: SensorMethodStep) {
         withAnimation {
             self.currentStep = step
         }

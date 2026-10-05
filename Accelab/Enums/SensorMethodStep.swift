@@ -1,5 +1,5 @@
 //
-//  Step.swift
+//  SensorMethodStep.swift
 //  Accelab
 //
 //  Created by Myung Joon Kang on 2025-09-21.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Step: CaseIterable, Identifiable {
+enum SensorMethodStep: CaseIterable, Identifiable {
     case idle, chooseAngle, determineAngle, standby, countdown, measuring, completed
     
     var id: Self { self }
