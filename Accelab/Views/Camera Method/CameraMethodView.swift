@@ -21,13 +21,15 @@ struct CameraMethodView: View {
     @State private var isAngleSkipped: Bool = false
 
     @State private var scrubber: VideoScrubber? = nil
+    @State private var calibration: CameraCalibration? = nil
+    @State private var trackedPoints: [TrackedPoint] = []
 
     @State private var splits: [DistanceSplit] = []
     @State private var csvURL: URL? = nil
 
     var body: some View {
         ZStack {
-            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle, isCompact: currentStep == .calibrate)
+            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle, isCompact: [.calibrate, .track].contains(currentStep))
 
             switch currentStep {
             case .idle:
@@ -57,9 +59,19 @@ struct CameraMethodView: View {
                     changeCurrentStep(to: .calibrate)
                 })
             case .calibrate:
-                calibrateStepView
+                if let scrubber {
+                    CalibrateStepView(scrubber: scrubber, calibration: calibration, onBack: {
+                        discardClip()
+                        changeCurrentStep(to: .record)
+                    }, onContinue: { calibration in
+                        self.calibration = calibration
+                        changeCurrentStep(to: .track)
+                    })
+                }
             case .track:
-                placeholderStepView(onBack: { changeCurrentStep(to: .calibrate) }, onContinue: finishMeasuring)
+                if let scrubber {
+                    TrackStepView(scrubber: scrubber, points: $trackedPoints, onBack: { changeCurrentStep(to: .calibrate) }, onFinish: finishMeasuring)
+                }
             case .completed:
                 CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits, csvURL: csvURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
@@ -90,33 +102,6 @@ struct CameraMethodView: View {
 
             GlassButton(text: "Start") {
                 changeCurrentStep(to: .chooseAngle)
-            }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
-        }
-    }
-
-    // TODO: Add the two markers and the length field, and move this into `Views/Camera Method/Steps/`.
-    private var calibrateStepView: some View {
-        ZStack {
-            if let scrubber {
-                VideoFrameViewer(scrubber: scrubber)
-                    .containerRelativeFrame(.horizontal) { width, _ in width * 0.6 }
-                    .padding(.top)
-                    .padding(.bottom, 70)
-                    .alignView(to: .trailing)
-            }
-
-            HStack {
-                GlassButton(text: "Back", style: .secondary) {
-                    discardClip()
-                    changeCurrentStep(to: .record)
-                }
-
-                GlassButton(text: "Continue") {
-                    changeCurrentStep(to: .track)
-                }
             }
             .alignView(to: .trailing)
             .alignViewVertically(to: .bottom)
@@ -172,18 +157,22 @@ struct CameraMethodView: View {
 
         Task {
             await scrubber.load()
-            // Draws the first frame; a player that has never been asked to seek shows nothing.
-            scrubber.seek(to: 0)
         }
     }
 
     /// Throws away the clip but keeps the angle, so another one can be chosen.
     private func discardClip() {
         self.scrubber = nil
+        self.calibration = nil
+        self.trackedPoints = []
         VideoClipStore.removeTempFiles()
     }
 
     private func finishMeasuring() {
+        if let calibration, let frames = scrubber?.frames {
+            self.splits = TrackGeometry.makeSplits(from: trackedPoints, calibration: calibration, seconds: frames.seconds(at:))
+        }
+
         changeCurrentStep(to: .completed)
         exportCSV()
     }
