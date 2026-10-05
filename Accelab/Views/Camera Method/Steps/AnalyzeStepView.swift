@@ -15,16 +15,51 @@ struct AnalyzeStepView: View {
     @State private var phaseIndex: Int = 0
 
     private static let duration: TimeInterval = 2.4
+    private static let graphSize = CGSize(width: 240, height: 96)
     private static let phases = ["Fitting the track…", "Converting pixels to metres…", "Building your data…"]
 
     var body: some View {
         VStack(spacing: 14) {
-            curve
-                .trim(from: 0, to: progress)
-                .stroke(Method.camera.color, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-                .frame(width: 280, height: 110)
-                .padding(18)
-                .glassEffect(.regular, in: .rect(cornerRadius: 24))
+            // Labelled as a graph: without the axes it is just a rising line.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Your run")
+                    .customFont(.caption, weight: .bold)
+
+                HStack(alignment: .center, spacing: 6) {
+                    Text("Distance")
+                        .customFont(.caption2, weight: .medium)
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 14)
+
+                    curve
+                        .trim(from: 0, to: progress)
+                        .stroke(Method.camera.color, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                        .frame(width: Self.graphSize.width, height: Self.graphSize.height)
+                        .padding(.leading, 6)
+                        .padding(.bottom, 6)
+                        .overlay(alignment: .bottomLeading) {
+                            // The two axes.
+                            Path { path in
+                                path.move(to: .zero)
+                                path.addLine(to: CGPoint(x: 0, y: Self.graphSize.height + 6))
+                                path.addLine(to: CGPoint(x: Self.graphSize.width + 6, y: Self.graphSize.height + 6))
+                            }
+                            .stroke(.secondary, lineWidth: 1)
+                        }
+                }
+
+                Text("Time")
+                    .customFont(.caption2, weight: .medium)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .padding(16)
+            .fixedSize()
+            .glassEffect(.regular, in: .rect(cornerRadius: 24))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Graph of your run: distance against time")
 
             Text(Self.phases[phaseIndex])
                 .customFont(.subheadline, weight: .medium)
@@ -49,7 +84,7 @@ struct AnalyzeStepView: View {
     /// Distance against time, scaled to fill the frame it is drawn in.
     private var curve: Path {
         Path { path in
-            let size = CGSize(width: 280, height: 110)
+            let size = Self.graphSize
             let maxTime = max(splits.last?.timeElapsed ?? 0, .leastNonzeroMagnitude)
             let maxDistance = max(splits.map(\.displacement).max() ?? 0, .leastNonzeroMagnitude)
 

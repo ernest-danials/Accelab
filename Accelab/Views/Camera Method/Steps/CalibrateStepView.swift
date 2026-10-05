@@ -131,7 +131,12 @@ struct CalibrateStepView: View {
                 .foregroundStyle(.secondary)
 
             TextField("100", text: $lengthText)
-                .keyboardType(.decimalPad)
+                // Not the decimal pad, which has no return key to submit with.
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.done)
+                .onSubmit {
+                    self.isLengthFieldFocused = false
+                }
                 .focused($isLengthFieldFocused)
                 .multilineTextAlignment(.trailing)
                 .customFont(.headline, weight: .bold)
@@ -143,6 +148,7 @@ struct CalibrateStepView: View {
 
             if isLengthFieldFocused {
                 Button {
+                    Haptics.tap()
                     self.isLengthFieldFocused = false
                 } label: {
                     Image(systemName: "checkmark.circle.fill")
@@ -251,6 +257,7 @@ private struct CalibrationHandle: View {
                 }
                 .onEnded { _ in
                     self.pointAtDragStart = nil
+                    Haptics.tap()
                 }
         )
         // Swallows taps on the marker, which would otherwise reach the video and hide the controls.

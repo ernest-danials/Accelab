@@ -171,7 +171,10 @@ struct TrackStepView: View {
     }
 
     private func methodCard(systemImage: String, title: String, detail: String, isRecommended: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        Button {
+            Haptics.prominentTap()
+            action()
+        } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Image(systemName: systemImage)
                     .customFont(.title2, weight: .semibold)
@@ -336,6 +339,7 @@ struct TrackStepView: View {
     /// Marks the cart on the current frame, replacing an earlier mark on it.
     private func mark(at position: CGPoint) {
         let frameIndex = scrubber.currentFrameIndex
+        Haptics.tap()
 
         withAnimation {
             self.points.removeAll { $0.frameIndex == frameIndex }
@@ -375,6 +379,7 @@ struct TrackStepView: View {
                 // Back to the box, which is kept, so it can be adjusted and tried again.
                 self.points.removeAll { $0.frameIndex >= startFrame }
                 self.didFailToTrack = true
+                Haptics.error()
                 scrubber.seek(toFrame: startFrame)
                 withAnimation { self.mode = .drawingBox }
                 return
@@ -384,6 +389,8 @@ struct TrackStepView: View {
             if let last = points.last {
                 scrubber.seek(toFrame: last.frameIndex)
             }
+            // A warning rather than a success when some of the points need checking.
+            if points.contains(where: isUncertain) { Haptics.warning() } else { Haptics.success() }
             withAnimation { self.mode = .viewing }
         }
     }
@@ -548,6 +555,7 @@ private struct TrackingBoxEditor: View {
                             // Committed only once the finger lifts, and only if it is big enough to track.
                             if let drawn = boxAtDragStart, min(drawn.width, drawn.height) >= TrackStepView.minimumBoxSide {
                                 self.box = drawn
+                                Haptics.tap()
                             }
                             self.boxAtDragStart = nil
                         }
@@ -584,6 +592,7 @@ private struct TrackingBoxEditor: View {
             }
             .onEnded { _ in
                 self.boxAtDragStart = nil
+                Haptics.tap()
             }
     }
 }

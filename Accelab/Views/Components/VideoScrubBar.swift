@@ -61,7 +61,7 @@ struct VideoScrubBar: View {
                     DragGesture(minimumDistance: 0, coordinateSpace: Self.coordinateSpace)
                         .onChanged { value in
                             let fraction = (value.location.x - Self.handleWidth / 2) / usableWidth
-                            scrubber.seek(toFrame: range.lowerBound + Int((fraction * span).rounded()))
+                            seek(toFrame: range.lowerBound + Int((fraction * span).rounded()))
                         }
                 )
             }
@@ -87,9 +87,16 @@ struct VideoScrubBar: View {
         .disabled(scrubber.frames == nil)
     }
 
+    /// Moves to a frame, with a tick whenever the frame shown actually changes.
+    private func seek(toFrame index: Int) {
+        let previous = scrubber.currentFrameIndex
+        scrubber.seek(toFrame: index)
+        if scrubber.currentFrameIndex != previous { Haptics.tick() }
+    }
+
     private func stepButton(systemImage: String, byFrames count: Int) -> some View {
         Button {
-            scrubber.step(byFrames: count)
+            seek(toFrame: scrubber.currentFrameIndex + count)
         } label: {
             Image(systemName: systemImage)
                 .customFont(.subheadline, weight: .bold)

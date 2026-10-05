@@ -39,8 +39,11 @@ struct CountdownStepView: View {
                 }
 
                 withAnimation { self.countdownValue -= 1 }
+                if self.countdownValue > 0 { Haptics.tick() }
             }
 
+            // Felt through the cart, this is the cue to let go.
+            Haptics.heavyTap()
             onFinished()
         }
     }

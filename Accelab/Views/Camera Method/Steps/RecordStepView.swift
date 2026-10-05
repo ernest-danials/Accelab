@@ -144,6 +144,7 @@ struct RecordStepView: View {
 
     private var recordButton: some View {
         Button {
+            Haptics.heavyTap()
             if captureManager.state == .recording {
                 onStop()
             } else {

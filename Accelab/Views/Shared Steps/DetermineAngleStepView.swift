@@ -107,6 +107,9 @@ struct DetermineAngleStepView: View {
 
             guard isAngleReadyToCapture else { return }
 
+            // Felt without looking, while both hands are on the track.
+            Haptics.tick()
+
             while let value = self.holdCountdownValue, value > 0 {
                 do {
                     try await Task.sleep(for: .seconds(1))
@@ -115,8 +118,10 @@ struct DetermineAngleStepView: View {
                 }
 
                 withAnimation { self.holdCountdownValue = value - 1 }
+                if value > 1 { Haptics.tick() }
             }
 
+            Haptics.success()
             onContinue(angleManager.currentAngle)
         }
         .overlay {

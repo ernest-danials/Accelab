@@ -29,7 +29,10 @@ struct GlassIconButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            if style == .prominent { Haptics.prominentTap() } else { Haptics.tap() }
+            action()
+        } label: {
             GlassIconLabel(systemImage: systemImage, title: title, style: style)
         }
         .buttonStyle(.plain)

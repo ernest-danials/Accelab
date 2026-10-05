@@ -79,12 +79,12 @@ private struct TrimRangeBar: View {
 
                     handle
                         .offset(x: startX)
-                        .gesture(DragGesture(minimumDistance: 0, coordinateSpace: Self.coordinateSpace).onChanged { scrubber.setTrimStart(frameIndex($0.location.x)) })
+                        .gesture(DragGesture(minimumDistance: 0, coordinateSpace: Self.coordinateSpace).onChanged { moveHandle { scrubber.setTrimStart(frameIndex($0.location.x)) }($0) })
                         .accessibilityLabel("Start")
 
                     handle
                         .offset(x: endX)
-                        .gesture(DragGesture(minimumDistance: 0, coordinateSpace: Self.coordinateSpace).onChanged { scrubber.setTrimEnd(frameIndex($0.location.x)) })
+                        .gesture(DragGesture(minimumDistance: 0, coordinateSpace: Self.coordinateSpace).onChanged { moveHandle { scrubber.setTrimEnd(frameIndex($0.location.x)) }($0) })
                         .accessibilityLabel("End")
                 }
                 .frame(height: Self.height)
@@ -98,6 +98,15 @@ private struct TrimRangeBar: View {
         .frame(height: GlassIconButton.height)
         .glassEffect(.regular, in: .capsule)
         .disabled(scrubber.frames == nil)
+    }
+
+    /// Wraps a handle's drag so it ticks whenever the kept range actually changes.
+    private func moveHandle(_ move: @escaping (DragGesture.Value) -> Void) -> (DragGesture.Value) -> Void {
+        { value in
+            let previous = scrubber.trimRange
+            move(value)
+            if scrubber.trimRange != previous { Haptics.tick() }
+        }
     }
 
     private var handle: some View {

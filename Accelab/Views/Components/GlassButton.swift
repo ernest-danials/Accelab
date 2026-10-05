@@ -32,7 +32,10 @@ struct GlassButton: View {
     }
 
     private var button: some View {
-        Button(action: action) {
+        Button {
+            if style == .prominent { Haptics.prominentTap() } else { Haptics.tap() }
+            action()
+        } label: {
             Text(text)
                 .customFont(textFont, weight: .medium)
                 .padding(.vertical, 5)

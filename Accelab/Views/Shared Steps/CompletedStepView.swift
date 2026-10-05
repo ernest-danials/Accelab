@@ -97,5 +97,9 @@ struct CompletedStepView: View {
                 .padding()
             }
         }
+        .onAppear {
+            // Both methods end here, so this is where finishing a run is felt.
+            Haptics.success()
+        }
     }
 }
