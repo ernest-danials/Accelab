@@ -36,7 +36,7 @@ struct CameraIdleStepView: View {
             // The camera, looking at the cart from beside it. Positioned here rather than tilted along
             // with the drawing, because glass loses its shape when it is rotated.
             Image(systemName: Method.camera.imageName)
-                .customFont(.title, weight: .medium)
+                .customFont(.largeTitle, weight: .medium)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.primary)
                 .frame(width: Self.cameraSize, height: Self.cameraSize)
