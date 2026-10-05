@@ -20,25 +20,21 @@ struct TrimStepView: View {
                 EmptyView()
             }
 
-            VideoStepLayout(step: .trim, isChromeHidden: isChromeHidden) {
+            VideoStepLayout(step: .trim, instruction: "Drag the two handles so only the run is kept, from the release to the end of the track.", isChromeHidden: isChromeHidden) {
                 GlassStatusLabel {
                     Label("\(keptDuration, specifier: "%.2f") s", systemImage: "scissors")
                         .contentTransition(.numericText(value: keptDuration))
                 }
                 .accessibilityLabel("\(keptDuration, specifier: "%.2f") seconds kept")
             } bottom: {
-                if !isChromeHidden {
-                    GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
-                        .transition(.blurReplace)
-                }
+                GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
+                    .hiddenWithChrome(isChromeHidden)
 
                 // The trim bar is what this step is for, so it stays when the rest is hidden.
                 TrimRangeBar(scrubber: scrubber)
 
-                if !isChromeHidden {
-                    GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, isDisabled: scrubber.frames == nil, perform: onContinue)
-                        .transition(.blurReplace)
-                }
+                GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, isDisabled: scrubber.frames == nil, perform: onContinue)
+                    .hiddenWithChrome(isChromeHidden)
             }
         }
     }

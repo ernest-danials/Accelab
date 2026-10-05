@@ -6,7 +6,7 @@
 import Foundation
 
 enum CameraMethodStep: CaseIterable, Identifiable {
-    case idle, chooseAngle, determineAngle, setup, record, trim, calibrate, track, completed
+    case idle, chooseAngle, determineAngle, setup, record, trim, calibrate, track, analyze, completed
 
     var id: Self { self }
 
@@ -33,6 +33,8 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Mark a Known Length"
         case .track:
             return "Track the Cart"
+        case .analyze:
+            return "Analysing"
         case .completed:
             return "Completed"
         }
@@ -56,7 +58,7 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Step 6"
         case .track:
             return "Step 7"
-        case .completed:
+        case .analyze, .completed:
             return ""
         }
     }
@@ -79,6 +81,8 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Drag the two markers onto the ends of the known length and enter how long it is."
         case .track:
             return "Follow the cart automatically, or switch on Tap and mark the same spot on it frame by frame."
+        case .analyze:
+            return "Turning the tracked points into distance and time."
         case .completed:
             return "Your lab data is ready for analysis! Make sure to save it before exiting."
         }

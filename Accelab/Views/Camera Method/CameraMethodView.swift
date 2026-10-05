@@ -86,6 +86,8 @@ struct CameraMethodView: View {
                 if let scrubber {
                     TrackStepView(scrubber: scrubber, points: $trackedPoints, onBack: { changeCurrentStep(to: .calibrate) }, onFinish: finishMeasuring)
                 }
+            case .analyze:
+                AnalyzeStepView(splits: splits, onFinished: { changeCurrentStep(to: .completed) })
             case .completed:
                 CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits, csvURL: csvURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
@@ -171,8 +173,8 @@ struct CameraMethodView: View {
             self.splits = TrackGeometry.makeSplits(from: trackedPoints, calibration: calibration, seconds: frames.seconds(at:))
         }
 
-        changeCurrentStep(to: .completed)
         exportCSV()
+        changeCurrentStep(to: .analyze)
     }
 
     /// Clears everything belonging to the current run: collected data, angles, and exported files.

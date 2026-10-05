@@ -10,34 +10,34 @@ import SwiftUI
 /// positioned, so nothing overlaps on a smaller screen.
 ///
 /// Tapping the video hides the controls, as in a video player. The top row goes entirely; each step
-/// decides what in its bottom row is essential enough to stay.
+/// decides what in its bottom row is essential enough to stay. Hidden controls fade in place rather than
+/// leaving the layout, so nothing slides when they return.
 struct VideoStepLayout<TopTrailing: View, Bottom: View>: View {
     let step: CameraMethodStep
+    /// What to do right now, shown under the step's title. Defaults to the step's description.
+    var instruction: LocalizedStringKey? = nil
     let isChromeHidden: Bool
     @ViewBuilder var topTrailing: TopTrailing
     @ViewBuilder var bottom: Bottom
 
     var body: some View {
         VStack(spacing: 0) {
-            if !isChromeHidden {
-                HStack(alignment: .top, spacing: 12) {
-                    titleCard
+            HStack(alignment: .top, spacing: 12) {
+                titleCard
 
-                    Spacer(minLength: 0)
+                Spacer(minLength: 0)
 
-                    // The step's controls keep their natural size; the title card gives way if space is short.
-                    topTrailing
-                        .fixedSize()
-                }
-                .transition(.blurReplace)
+                // The step's controls keep their natural size; the title card gives way if space is short.
+                topTrailing
+                    .fixedSize()
             }
+            .hiddenWithChrome(isChromeHidden)
 
             Spacer(minLength: 0)
 
-            GlassEffectContainer {
-                HStack(spacing: 10) {
-                    bottom
-                }
+            // Not in a glass container: glass inside one ignores opacity, and these controls fade.
+            HStack(spacing: 10) {
+                bottom
             }
         }
         .padding()
@@ -52,15 +52,26 @@ struct VideoStepLayout<TopTrailing: View, Bottom: View>: View {
             Text("\(step.subtitle) · \(step.title)")
                 .customFont(.subheadline, weight: .bold)
 
-            Text(step.description)
-                .customFont(.caption)
-                .foregroundStyle(.secondary)
+            Text(instruction ?? LocalizedStringKey(step.description))
+                .customFont(.caption, weight: .medium)
+                .foregroundStyle(.primary.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
+                .contentTransition(.opacity)
         }
-        .frame(maxWidth: 250, alignment: .leading)
+        .frame(maxWidth: 260, alignment: .leading)
         .padding(.vertical, 10)
         .padding(.horizontal, 14)
         .glassEffect(.regular, in: .rect(cornerRadius: 20))
+    }
+}
+
+extension View {
+    /// Fades a control out with the rest of the controls, keeping its place in the layout.
+    func hiddenWithChrome(_ isHidden: Bool) -> some View {
+        self
+            .opacity(isHidden ? 0 : 1)
+            .allowsHitTesting(!isHidden)
+            .accessibilityHidden(isHidden)
     }
 }
 

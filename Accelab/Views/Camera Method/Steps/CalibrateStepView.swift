@@ -54,7 +54,7 @@ struct CalibrateStepView: View {
                 }
             }
 
-            VideoStepLayout(step: .calibrate, isChromeHidden: isChromeHidden) {
+            VideoStepLayout(step: .calibrate, instruction: "Drag each yellow marker onto one end of a length you know, then enter that length.", isChromeHidden: isChromeHidden) {
                 VStack(alignment: .trailing, spacing: 8) {
                     lengthField
 
@@ -69,7 +69,7 @@ struct CalibrateStepView: View {
                 .animation(.smooth, value: isReferenceTooShort)
             } bottom: {
                 // The markers stay on the video; everything in this row is hidden with the rest.
-                if !isChromeHidden {
+                Group {
                     GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
 
                     VideoScrubBar(scrubber: scrubber)
@@ -80,6 +80,7 @@ struct CalibrateStepView: View {
                         }
                     }
                 }
+                .hiddenWithChrome(isChromeHidden)
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -103,10 +104,11 @@ struct CalibrateStepView: View {
             .customFont(.caption, weight: .bold)
             .monospacedDigit()
             .lineLimit(1)
-            .padding(.vertical, 5)
-            .padding(.horizontal, 10)
-            .glassEffect(.regular.interactive(), in: .capsule)
-            .environment(\.colorScheme, .dark)
+            .foregroundStyle(.white)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 9)
+            // A plain backing, not glass: turned glass loses its shape and swallows the line beneath it.
+            .background(.black.opacity(0.6), in: .capsule)
             .fixedSize()
             .rotationEffect(.radians(angle))
             .position(center)

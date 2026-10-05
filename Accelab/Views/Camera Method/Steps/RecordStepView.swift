@@ -28,7 +28,7 @@ struct RecordStepView: View {
                     withAnimation(.smooth) { self.isChromeHidden.toggle() }
                 }
 
-            VideoStepLayout(step: .record, isChromeHidden: isChromeHidden) {
+            VideoStepLayout(step: .record, instruction: isRecording ? "Release the cart, then stop once it reaches the end of the track." : "Press the red button to start recording, or choose a video you already filmed.", isChromeHidden: isChromeHidden) {
                 VStack(alignment: .trailing, spacing: 8) {
                     if isImporting {
                         GlassStatusLabel {
@@ -56,10 +56,8 @@ struct RecordStepView: View {
                     }
                 }
             } bottom: {
-                if !isChromeHidden {
-                    GlassIconButton(systemImage: "chevron.backward", label: "Back", isDisabled: isImporting || isRecording, perform: onBack)
-                        .transition(.blurReplace)
-                }
+                GlassIconButton(systemImage: "chevron.backward", label: "Back", isDisabled: isImporting || isRecording, perform: onBack)
+                    .hiddenWithChrome(isChromeHidden)
 
                 Spacer(minLength: 0)
 
