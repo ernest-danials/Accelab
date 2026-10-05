@@ -12,6 +12,8 @@ struct StepTitleView: View {
     let description: String
     /// Uses the larger home-screen styling, as on a method's idle step.
     let isProminent: Bool
+    /// Narrows the block on steps that draw their own content beside it.
+    var isCompact: Bool = false
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -31,7 +33,7 @@ struct StepTitleView: View {
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
                     .contentTransition(.numericText())
-                    .frame(maxWidth: isProminent ? 280 : nil, alignment: .leading)
+                    .frame(maxWidth: (isProminent || isCompact) ? 280 : nil, alignment: .leading)
             }
         }
         .alignView(to: .leading)

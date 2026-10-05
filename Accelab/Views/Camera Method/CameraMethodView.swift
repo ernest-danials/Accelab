@@ -20,12 +20,14 @@ struct CameraMethodView: View {
     @State private var capturedAngle: Double? = nil
     @State private var isAngleSkipped: Bool = false
 
+    @State private var scrubber: VideoScrubber? = nil
+
     @State private var splits: [DistanceSplit] = []
     @State private var csvURL: URL? = nil
 
     var body: some View {
         ZStack {
-            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle)
+            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle, isCompact: currentStep == .calibrate)
 
             switch currentStep {
             case .idle:
@@ -50,9 +52,12 @@ struct CameraMethodView: View {
             case .setup:
                 placeholderStepView(onBack: { changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle) }, onContinue: { changeCurrentStep(to: .record) })
             case .record:
-                placeholderStepView(onBack: { changeCurrentStep(to: .setup) }, onContinue: { changeCurrentStep(to: .calibrate) })
+                RecordStepView(onBack: { changeCurrentStep(to: .setup) }, onImported: { url in
+                    loadClip(at: url)
+                    changeCurrentStep(to: .calibrate)
+                })
             case .calibrate:
-                placeholderStepView(onBack: { changeCurrentStep(to: .record) }, onContinue: { changeCurrentStep(to: .track) })
+                calibrateStepView
             case .track:
                 placeholderStepView(onBack: { changeCurrentStep(to: .calibrate) }, onContinue: finishMeasuring)
             case .completed:
@@ -85,6 +90,33 @@ struct CameraMethodView: View {
 
             GlassButton(text: "Start") {
                 changeCurrentStep(to: .chooseAngle)
+            }
+            .alignView(to: .trailing)
+            .alignViewVertically(to: .bottom)
+            .padding()
+        }
+    }
+
+    // TODO: Add the two markers and the length field, and move this into `Views/Camera Method/Steps/`.
+    private var calibrateStepView: some View {
+        ZStack {
+            if let scrubber {
+                VideoFrameViewer(scrubber: scrubber)
+                    .containerRelativeFrame(.horizontal) { width, _ in width * 0.6 }
+                    .padding(.top)
+                    .padding(.bottom, 70)
+                    .alignView(to: .trailing)
+            }
+
+            HStack {
+                GlassButton(text: "Back", style: .secondary) {
+                    discardClip()
+                    changeCurrentStep(to: .record)
+                }
+
+                GlassButton(text: "Continue") {
+                    changeCurrentStep(to: .track)
+                }
             }
             .alignView(to: .trailing)
             .alignViewVertically(to: .bottom)
@@ -134,6 +166,23 @@ struct CameraMethodView: View {
 
     // MARK: - Run lifecycle
 
+    private func loadClip(at url: URL) {
+        let scrubber = VideoScrubber(url: url)
+        self.scrubber = scrubber
+
+        Task {
+            await scrubber.load()
+            // Draws the first frame; a player that has never been asked to seek shows nothing.
+            scrubber.seek(to: 0)
+        }
+    }
+
+    /// Throws away the clip but keeps the angle, so another one can be chosen.
+    private func discardClip() {
+        self.scrubber = nil
+        VideoClipStore.removeTempFiles()
+    }
+
     private func finishMeasuring() {
         changeCurrentStep(to: .completed)
         exportCSV()
@@ -141,6 +190,7 @@ struct CameraMethodView: View {
 
     /// Clears everything belonging to the current run: collected data, angles, and exported files.
     private func resetRun() {
+        discardClip()
         self.splits = []
         self.desiredAngle = ChooseAngleStepView.defaultAngle
         self.capturedAngle = nil
