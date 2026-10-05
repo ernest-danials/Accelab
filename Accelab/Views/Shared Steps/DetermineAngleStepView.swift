@@ -88,9 +88,9 @@ struct DetermineAngleStepView: View {
 
             GlassEffectContainer {
                 HStack {
-                    GlassButton(text: "Back", style: .secondary, perform: onBack)
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
 
-                    GlassButton(text: "Continue", isDisabled: !isAngleReadyToCapture) {
+                    GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, isDisabled: !isAngleReadyToCapture) {
                         onContinue(angleManager.currentAngle)
                     }
                 }

@@ -18,12 +18,12 @@ struct CameraIdleStepView: View {
                 .frame(width: 90, height: 90)
                 .glassEffect(.regular, in: .circle)
 
-            GlassButton(text: "Change Method", style: .secondary, perform: onChangeMethod)
+            GlassIconButton(systemImage: "chevron.backward", label: "Change Method", perform: onChangeMethod)
                 .alignView(to: .leading)
                 .alignViewVertically(to: .bottom)
                 .padding()
 
-            GlassButton(text: "Start", perform: onStart)
+            GlassIconButton(systemImage: "play.fill", title: "Start", label: "Start", style: .prominent, perform: onStart)
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)
                 .padding()

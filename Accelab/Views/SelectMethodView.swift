@@ -67,13 +67,13 @@ struct SelectMethodView: View {
                 .padding(.bottom, 12)
         }
         .overlay(alignment: .bottomLeading) {
-            GlassButton(text: "What is Accelab?", style: .secondary, textFont: .subheadline) {
+            GlassIconButton(systemImage: "questionmark", label: "What is Accelab?") {
                 self.isShowingWhatIsAccelabView = true
             }
             .padding()
         }
         .overlay(alignment: .bottomTrailing) {
-            GlassButton(text: "Settings", style: .secondary, textFont: .subheadline) {
+            GlassIconButton(systemImage: "gearshape", label: "Settings") {
                 self.isShowingSettingsView = true
             }
             .padding()

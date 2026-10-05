@@ -17,60 +17,62 @@ struct RecordStepView: View {
     @State private var selectedItem: PhotosPickerItem? = nil
     @State private var isImporting: Bool = false
     @State private var didFailToImport: Bool = false
+    @State private var isChromeHidden: Bool = false
 
     var body: some View {
         ZStack {
             preview
+                .onTapGesture {
+                    // Only while there is a picture to look at; otherwise the controls are all there is.
+                    guard isCameraRunning else { return }
+                    withAnimation(.smooth) { self.isChromeHidden.toggle() }
+                }
 
-            VideoStepLayout(step: .record) {
+            VideoStepLayout(step: .record, isChromeHidden: isChromeHidden) {
                 VStack(alignment: .trailing, spacing: 8) {
                     if isImporting {
-                        HStack(spacing: 8) {
-                            ProgressView()
+                        GlassStatusLabel {
+                            HStack(spacing: 8) {
+                                ProgressView()
 
-                            Text("Importing…")
-                                .customFont(.subheadline, weight: .medium)
+                                Text("Importing…")
+                            }
                         }
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 14)
-                        .glassEffect(.regular, in: .capsule)
                     } else {
                         PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
-                            Label("Choose from Photos", systemImage: "photo.on.rectangle")
-                                .customFont(.subheadline, weight: .medium)
-                                .padding(.vertical, 5)
-                                .padding(.horizontal, 8)
+                            GlassIconLabel(systemImage: "photo.on.rectangle")
                         }
-                        .buttonStyle(.glass)
+                        .buttonStyle(.plain)
                         .disabled(isRecording)
+                        .opacity(isRecording ? 0.5 : 1)
+                        .accessibilityLabel("Choose from Photos")
                     }
 
                     if didFailToImport {
-                        Label("That video couldn't be imported.", systemImage: "exclamationmark.triangle.fill")
-                            .customFont(.caption, weight: .medium)
-                            .foregroundStyle(.red)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .glassEffect(.regular, in: .capsule)
+                        GlassStatusLabel {
+                            Label("That video couldn't be imported", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.red)
+                        }
                     }
                 }
             } bottom: {
-                GlassButton(text: "Back", style: .secondary, isDisabled: isImporting || isRecording, perform: onBack)
+                if !isChromeHidden {
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back", isDisabled: isImporting || isRecording, perform: onBack)
+                        .transition(.blurReplace)
+                }
 
                 Spacer(minLength: 0)
 
+                // The timer and the record button stay when the rest is hidden.
                 if let recordingStartDate = captureManager.recordingStartDate {
-                    Label {
-                        Text(recordingStartDate, style: .timer)
-                            .monospacedDigit()
-                    } icon: {
-                        Image(systemName: "circle.fill")
-                            .foregroundStyle(.red)
+                    GlassStatusLabel {
+                        Label {
+                            Text(recordingStartDate, style: .timer)
+                        } icon: {
+                            Image(systemName: "circle.fill")
+                                .foregroundStyle(.red)
+                        }
                     }
-                    .customFont(.subheadline, weight: .bold)
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 14)
-                    .glassEffect(.regular, in: .capsule)
                 }
             }
 
@@ -99,6 +101,10 @@ struct RecordStepView: View {
                 }
             }
         }
+        .onChange(of: isCameraRunning) { _, isRunning in
+            // Without a picture the controls must be reachable.
+            if !isRunning { self.isChromeHidden = false }
+        }
     }
 
     private var isRecording: Bool {
@@ -117,13 +123,10 @@ struct RecordStepView: View {
 
             switch captureManager.state {
             case .ready, .recording, .finishing:
-                // Fitted rather than filled, so what is on screen is exactly what is recorded.
                 CameraPreviewView(captureManager: captureManager)
-                    .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                    .clipShape(.rect(cornerRadius: 24))
             case .unauthorized:
                 unavailableMessage("Accelab needs camera access to record the run.") {
-                    GlassButton(text: "Open Settings", style: .secondary, textFont: .subheadline) {
+                    GlassIconButton(systemImage: "gear", title: "Open Settings", label: "Open Settings") {
                         if let url = URL(string: UIApplication.openSettingsURLString) {
                             UIApplication.shared.open(url)
                         }
@@ -136,7 +139,9 @@ struct RecordStepView: View {
                     .tint(.white)
             }
         }
+        .contentShape(.rect)
         .ignoresSafeArea()
+        .environment(\.colorScheme, .dark)
     }
 
     private var recordButton: some View {

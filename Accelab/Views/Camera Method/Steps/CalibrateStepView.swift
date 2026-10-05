@@ -16,13 +16,21 @@ struct CalibrateStepView: View {
     @State private var end: CGPoint? = nil
     @State private var lengthText: String = "100"
     @FocusState private var isLengthFieldFocused: Bool
+    @State private var isChromeHidden: Bool = false
 
     /// A shorter reference makes the scale too sensitive to where the markers are placed.
     private static let minimumLengthFraction: Double = 0.15
 
     var body: some View {
         ZStack {
-            VideoFrameViewer(scrubber: scrubber) { mapping in
+            VideoFrameViewer(scrubber: scrubber, onTap: { _ in
+                // A tap on the video puts the keyboard away first, and only otherwise hides the controls.
+                if isLengthFieldFocused {
+                    self.isLengthFieldFocused = false
+                } else {
+                    withAnimation(.smooth) { self.isChromeHidden.toggle() }
+                }
+            }) { mapping in
                 if let start, let end {
                     let startInView = mapping.viewPoint(for: start)
                     let endInView = mapping.viewPoint(for: end)
@@ -35,6 +43,8 @@ struct CalibrateStepView: View {
                     .shadow(color: .black.opacity(0.4), radius: 1)
                     .allowsHitTesting(false)
 
+                    lengthIndicator(from: startInView, to: endInView)
+
                     GlassEffectContainer {
                         ZStack {
                             CalibrationHandle(point: Binding(get: { start }, set: { self.start = $0 }), mapping: mapping)
@@ -44,29 +54,30 @@ struct CalibrateStepView: View {
                 }
             }
 
-            VideoStepLayout(step: .calibrate) {
+            VideoStepLayout(step: .calibrate, isChromeHidden: isChromeHidden) {
                 VStack(alignment: .trailing, spacing: 8) {
                     lengthField
 
                     if isReferenceTooShort {
-                        Label("Use a longer reference", systemImage: "exclamationmark.triangle.fill")
-                            .customFont(.caption, weight: .medium)
-                            .foregroundStyle(.yellow)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .glassEffect(.regular, in: .capsule)
-                            .transition(.blurReplace)
+                        GlassStatusLabel {
+                            Label("Use a longer reference", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.yellow)
+                        }
+                        .transition(.blurReplace)
                     }
                 }
                 .animation(.smooth, value: isReferenceTooShort)
             } bottom: {
-                GlassButton(text: "Back", style: .secondary, perform: onBack)
+                // The markers stay on the video; everything in this row is hidden with the rest.
+                if !isChromeHidden {
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
 
-                VideoScrubBar(scrubber: scrubber)
+                    VideoScrubBar(scrubber: scrubber)
 
-                GlassButton(text: "Continue", isDisabled: currentCalibration == nil) {
-                    if let currentCalibration {
-                        onContinue(currentCalibration)
+                    GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, isDisabled: currentCalibration == nil) {
+                        if let currentCalibration {
+                            onContinue(currentCalibration)
+                        }
                     }
                 }
             }
@@ -75,6 +86,35 @@ struct CalibrateStepView: View {
         .task(id: scrubber.frameCount) {
             placeMarkersIfNeeded()
         }
+    }
+
+    /// The entered length written along the line, like a dimension on a drawing. Tapping it edits the length.
+    private func lengthIndicator(from start: CGPoint, to end: CGPoint) -> some View {
+        var angle = atan2(end.y - start.y, end.x - start.x)
+        // Turned the short way round, so the text is never upside down.
+        if angle > .pi / 2 { angle -= .pi }
+        if angle < -.pi / 2 { angle += .pi }
+
+        // Lifted off the line, on the side away from the screen's bottom, so it doesn't cover the reference.
+        let lift: CGFloat = 24
+        let center = CGPoint(x: (start.x + end.x) / 2 + sin(angle) * lift, y: (start.y + end.y) / 2 - cos(angle) * lift)
+
+        return Text("\(lengthText.isEmpty ? "?" : lengthText) cm")
+            .customFont(.caption, weight: .bold)
+            .monospacedDigit()
+            .lineLimit(1)
+            .padding(.vertical, 5)
+            .padding(.horizontal, 10)
+            .glassEffect(.regular.interactive(), in: .capsule)
+            .environment(\.colorScheme, .dark)
+            .fixedSize()
+            .rotationEffect(.radians(angle))
+            .position(center)
+            .onTapGesture {
+                withAnimation(.smooth) { self.isChromeHidden = false }
+                self.isLengthFieldFocused = true
+            }
+            .accessibilityLabel("Known length, \(lengthText) centimetres")
     }
 
     private var lengthField: some View {
@@ -95,16 +135,24 @@ struct CalibrateStepView: View {
                 .customFont(.subheadline, weight: .medium)
 
             if isLengthFieldFocused {
-                Button("Done") {
+                Button {
                     self.isLengthFieldFocused = false
+                } label: {
+                    Image(systemName: "checkmark.circle.fill")
+                        .customFont(.title3, weight: .semibold)
+                        .foregroundStyle(.tint)
                 }
-                .customFont(.subheadline, weight: .bold)
                 .buttonStyle(.plain)
-                .foregroundStyle(.tint)
+                .accessibilityLabel("Done")
             }
         }
-        .padding(.vertical, 8)
         .padding(.horizontal, 14)
+        .frame(height: GlassIconButton.height)
+        .contentShape(.capsule)
+        // The whole capsule opens the keyboard, not only the digits.
+        .onTapGesture {
+            self.isLengthFieldFocused = true
+        }
         .glassEffect(.regular.interactive(), in: .capsule)
     }
 
@@ -187,6 +235,8 @@ private struct CalibrationHandle: View {
                     self.pointAtDragStart = nil
                 }
         )
+        // Swallows taps on the marker, which would otherwise reach the video and hide the controls.
+        .onTapGesture {}
         .accessibilityLabel("Marker")
     }
 }

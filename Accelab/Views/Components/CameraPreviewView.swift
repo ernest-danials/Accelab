@@ -12,7 +12,8 @@ struct CameraPreviewView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PreviewView {
         let view = PreviewView()
-        view.previewLayer.videoGravity = .resizeAspect
+        // Fills the screen; the recording keeps the full frame, a little more than is shown.
+        view.previewLayer.videoGravity = .resizeAspectFill
         view.previewLayer.session = captureManager.session
         view.follow(captureManager.attach(previewLayer: view.previewLayer))
         return view

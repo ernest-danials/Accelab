@@ -24,8 +24,8 @@ struct VideoScrubBar: View {
                 .monospacedDigit()
                 .frame(minWidth: 56, alignment: .trailing)
         }
-        .padding(.vertical, 6)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, 12)
+        .frame(height: GlassIconButton.height)
         .glassEffect(.regular, in: .capsule)
         .disabled(scrubber.frames == nil)
     }

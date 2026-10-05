@@ -22,7 +22,7 @@ struct CountdownStepView: View {
                 .contentTransition(.numericText(countsDown: true))
                 .offset(y: 15)
 
-            GlassButton(text: "Cancel", style: .secondary, perform: onCancel)
+            GlassIconButton(systemImage: "xmark", label: "Cancel", perform: onCancel)
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)
                 .padding()

@@ -78,7 +78,7 @@ enum CameraMethodStep: CaseIterable, Identifiable {
         case .calibrate:
             return "Drag the two markers onto the ends of the known length and enter how long it is."
         case .track:
-            return "Start at the release. Tap the same spot on the cart on each frame, or track it automatically."
+            return "Follow the cart automatically, or switch on Tap and mark the same spot on it frame by frame."
         case .completed:
             return "Your lab data is ready for analysis! Make sure to save it before exiting."
         }

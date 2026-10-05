@@ -11,7 +11,8 @@ struct TrackStepView: View {
     let onBack: () -> Void
     let onFinish: () -> Void
 
-    @State private var mode: Mode = .marking
+    @State private var mode: Mode = .viewing
+    @State private var isChromeHidden: Bool = false
     /// The box drawn around the cart for automatic tracking, in pixels of the frame as it is shown.
     @State private var box: CGRect? = nil
     @State private var trackingTask: Task<Void, Never>? = nil
@@ -28,16 +29,20 @@ struct TrackStepView: View {
     private static let minimumTrailMarkerSpacing: CGFloat = 14
 
     private enum Mode {
-        case marking, drawingBox, tracking
+        /// Nothing in progress: a tap on the video hides or shows the controls.
+        case viewing
+        /// A tap on the video marks the cart.
+        case tapping
+        case drawingBox, tracking
     }
 
     var body: some View {
         // Read here rather than inside the overlay, so the highlight follows the scrubber.
         let currentFrameIndex = scrubber.currentFrameIndex
-        let onTap: ((CGPoint) -> Void)? = mode == .marking ? { mark(at: $0) } : nil
+        let isChromeHidden = isChromeHidden && mode == .viewing
 
         ZStack {
-            VideoFrameViewer(scrubber: scrubber, onTap: onTap) { mapping in
+            VideoFrameViewer(scrubber: scrubber, onTap: handleTap) { mapping in
                 // No blending distance, so neighbouring markers stay separate beads instead of merging.
                 GlassEffectContainer(spacing: 0) {
                     ZStack {
@@ -61,11 +66,11 @@ struct TrackStepView: View {
                 }
             }
 
-            VideoStepLayout(step: .track) {
+            VideoStepLayout(step: .track, isChromeHidden: isChromeHidden) {
                 GlassEffectContainer {
                     VStack(alignment: .trailing, spacing: 8) {
                         switch mode {
-                        case .marking:
+                        case .viewing, .tapping:
                             markingControls
                         case .drawingBox:
                             boxControls
@@ -75,12 +80,15 @@ struct TrackStepView: View {
                     }
                 }
             } bottom: {
-                GlassButton(text: "Back", style: .secondary, isDisabled: mode == .tracking, perform: onBack)
+                // The points stay on the video; everything in this row is hidden with the rest.
+                if !isChromeHidden {
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back", isDisabled: mode == .tracking, perform: onBack)
 
-                VideoScrubBar(scrubber: scrubber)
-                    .disabled(mode == .tracking)
+                    VideoScrubBar(scrubber: scrubber)
+                        .disabled(mode == .tracking)
 
-                GlassButton(text: "Finish", isDisabled: mode != .marking || points.count < Self.minimumPointCount, perform: onFinish)
+                    GlassIconButton(systemImage: "checkmark", label: "Finish", style: .prominent, isDisabled: !(mode == .viewing || mode == .tapping) || points.count < Self.minimumPointCount, perform: onFinish)
+                }
             }
         }
         .onDisappear {
@@ -93,19 +101,20 @@ struct TrackStepView: View {
     @ViewBuilder
     private var markingControls: some View {
         HStack(spacing: 8) {
-            Text("^[\(points.count) point](inflect: true)")
-                .customFont(.subheadline, weight: .bold)
-                .monospacedDigit()
-                .contentTransition(.numericText(value: Double(points.count)))
-                .padding(.vertical, 8)
-                .padding(.horizontal, 14)
-                .glassEffect(.regular, in: .capsule)
+            GlassStatusLabel {
+                Text("^[\(points.count) point](inflect: true)")
+                    .contentTransition(.numericText(value: Double(points.count)))
+            }
 
-            GlassButton(text: "Auto-Track", textFont: .subheadline) {
+            GlassIconButton(systemImage: "scope", title: "Auto", label: "Track Automatically") {
                 self.didFailToTrack = false
                 withAnimation { self.mode = .drawingBox }
             }
-            .fixedSize()
+
+            GlassIconButton(systemImage: "hand.tap", title: "Tap", label: "Mark by Tapping", style: mode == .tapping ? .prominent : .secondary) {
+                self.didFailToTrack = false
+                withAnimation { self.mode = mode == .tapping ? .viewing : .tapping }
+            }
 
             Menu {
                 Button("Undo Last Point", systemImage: "arrow.uturn.backward", action: undo)
@@ -113,33 +122,33 @@ struct TrackStepView: View {
                 Button("Remove Points After This Frame", systemImage: "arrow.right.to.line") { removePoints(keeping: { $0 <= scrubber.currentFrameIndex }) }
                 Button("Clear All Points", systemImage: "trash", role: .destructive, action: clear)
             } label: {
-                Image(systemName: "ellipsis")
-                    .customFont(.subheadline, weight: .bold)
-                    .frame(width: 22, height: 26)
+                GlassIconLabel(systemImage: "ellipsis")
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.plain)
             .disabled(points.isEmpty)
+            .opacity(points.isEmpty ? 0.5 : 1)
             .accessibilityLabel("Edit Points")
         }
 
         if didFailToTrack {
-            hint("Couldn't follow the cart. Try a tighter box, or tap it by hand.", systemImage: "exclamationmark.triangle.fill", color: .red)
+            hint("Couldn't follow the cart. Try a tighter box, or mark it by tapping.", systemImage: "exclamationmark.triangle.fill", color: .red)
+        } else if mode == .tapping {
+            hint("Tap the same spot on the cart. The video moves on after each tap.", systemImage: "hand.tap", color: .primary)
         } else if uncertainPointCount > 0 {
-            hint("^[\(uncertainPointCount) orange point](inflect: true) may be off. Tap the cart on that frame to fix it.", systemImage: "exclamationmark.circle.fill", color: .orange)
+            hint("^[\(uncertainPointCount) orange point](inflect: true) may be off. Switch on Tap and tap the cart on that frame to fix it.", systemImage: "exclamationmark.circle.fill", color: .orange)
         }
     }
 
     @ViewBuilder
     private var boxControls: some View {
         HStack(spacing: 8) {
-            GlassButton(text: "Cancel", style: .secondary, textFont: .subheadline) {
+            GlassIconButton(systemImage: "xmark", label: "Cancel") {
                 self.box = nil
-                withAnimation { self.mode = .marking }
+                withAnimation { self.mode = .viewing }
             }
 
-            GlassButton(text: "Start", textFont: .subheadline, isDisabled: box == nil, perform: startTracking)
+            GlassIconButton(systemImage: "play.fill", title: "Start", label: "Start Tracking", style: .prominent, isDisabled: box == nil, perform: startTracking)
         }
-        .fixedSize()
 
         hint("Drag a box tightly around the cart on this frame.", systemImage: "rectangle.dashed", color: .primary)
     }
@@ -147,22 +156,18 @@ struct TrackStepView: View {
     @ViewBuilder
     private var trackingControls: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 8) {
-                ProgressView()
+            GlassStatusLabel {
+                HStack(spacing: 8) {
+                    ProgressView()
 
-                Text("Tracking… ^[\(points.count) point](inflect: true)")
-                    .customFont(.subheadline, weight: .bold)
-                    .monospacedDigit()
+                    Text("^[\(points.count) point](inflect: true)")
+                }
             }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 14)
-            .glassEffect(.regular, in: .capsule)
 
-            GlassButton(text: "Stop", style: .secondary, textFont: .subheadline) {
+            GlassIconButton(systemImage: "stop.fill", label: "Stop Tracking") {
                 trackingTask?.cancel()
             }
         }
-        .fixedSize()
     }
 
     private func hint(_ text: LocalizedStringKey, systemImage: String, color: Color) -> some View {
@@ -254,6 +259,21 @@ struct TrackStepView: View {
 
     // MARK: - Actions
 
+    /// A tap on the video marks the cart while tapping is switched on, and otherwise hides or shows the
+    /// controls, as in a video player.
+    private func handleTap(at position: CGPoint) {
+        switch mode {
+        case .viewing:
+            withAnimation(.smooth) { self.isChromeHidden.toggle() }
+        case .tapping:
+            if let displaySize = scrubber.frames?.displaySize, CGRect(origin: .zero, size: displaySize).contains(position) {
+                mark(at: position)
+            }
+        case .drawingBox, .tracking:
+            break
+        }
+    }
+
     /// Marks the cart on the current frame, replacing an earlier mark on it, and moves on.
     private func mark(at position: CGPoint) {
         let frameIndex = scrubber.currentFrameIndex
@@ -298,7 +318,7 @@ struct TrackStepView: View {
             if let last = points.last {
                 scrubber.seek(toFrame: last.frameIndex)
             }
-            withAnimation { self.mode = .marking }
+            withAnimation { self.mode = .viewing }
         }
     }
 

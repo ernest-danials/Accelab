@@ -56,14 +56,14 @@ struct MeasuringStepView: View {
 
             GlassEffectContainer {
                 HStack {
-                    GlassButton(text: "Back", style: .secondary) {
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back") {
                         self.isShowingConfirmationDialogToGoBack = true
                     }
                     .confirmationDialog("This will reset all the collected data. Are you sure?", isPresented: $isShowingConfirmationDialogToGoBack, titleVisibility: .visible) {
                         Button("Yes, reset and go back", role: .destructive, action: onDiscard)
                     }
 
-                    GlassButton(text: "Done", isDisabled: splits.isEmpty, perform: onDone)
+                    GlassIconButton(systemImage: "checkmark", label: "Done", style: .prominent, isDisabled: splits.isEmpty, perform: onDone)
                 }
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)

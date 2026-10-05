@@ -10,26 +10,35 @@ struct TrimStepView: View {
     let onBack: () -> Void
     let onContinue: () -> Void
 
+    @State private var isChromeHidden: Bool = false
+
     var body: some View {
         ZStack {
-            VideoFrameViewer(scrubber: scrubber) { _ in
+            VideoFrameViewer(scrubber: scrubber, onTap: { _ in
+                withAnimation(.smooth) { self.isChromeHidden.toggle() }
+            }) { _ in
                 EmptyView()
             }
 
-            VideoStepLayout(step: .trim) {
-                Label("\(keptDuration, specifier: "%.2f") s kept", systemImage: "scissors")
-                    .customFont(.subheadline, weight: .medium)
-                    .monospacedDigit()
-                    .contentTransition(.numericText(value: keptDuration))
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 14)
-                    .glassEffect(.regular, in: .capsule)
+            VideoStepLayout(step: .trim, isChromeHidden: isChromeHidden) {
+                GlassStatusLabel {
+                    Label("\(keptDuration, specifier: "%.2f") s", systemImage: "scissors")
+                        .contentTransition(.numericText(value: keptDuration))
+                }
+                .accessibilityLabel("\(keptDuration, specifier: "%.2f") seconds kept")
             } bottom: {
-                GlassButton(text: "Back", style: .secondary, perform: onBack)
+                if !isChromeHidden {
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
+                        .transition(.blurReplace)
+                }
 
+                // The trim bar is what this step is for, so it stays when the rest is hidden.
                 TrimRangeBar(scrubber: scrubber)
 
-                GlassButton(text: "Continue", isDisabled: scrubber.frames == nil, perform: onContinue)
+                if !isChromeHidden {
+                    GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, isDisabled: scrubber.frames == nil, perform: onContinue)
+                        .transition(.blurReplace)
+                }
             }
         }
     }
@@ -89,8 +98,8 @@ private struct TrimRangeBar: View {
 
             timeLabel(for: scrubber.trimRange.upperBound)
         }
-        .padding(.vertical, 6)
         .padding(.horizontal, 14)
+        .frame(height: GlassIconButton.height)
         .glassEffect(.regular, in: .capsule)
         .disabled(scrubber.frames == nil)
     }

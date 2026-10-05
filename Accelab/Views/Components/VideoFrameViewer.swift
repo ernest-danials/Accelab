@@ -15,31 +15,37 @@ struct VideoViewMapping {
     let zoom: CGFloat
     let offset: CGSize
 
-    /// View points per video pixel when the whole frame is fitted into the viewer.
-    private var fitScale: CGFloat {
+    /// View points per video pixel when the frame fills the viewer, which is how it is shown at a zoom of 1.
+    private var fillScale: CGFloat {
         guard videoSize.width > 0, videoSize.height > 0 else { return 1 }
-        return min(containerSize.width / videoSize.width, containerSize.height / videoSize.height)
+        return max(containerSize.width / videoSize.width, containerSize.height / videoSize.height)
+    }
+
+    /// The zoom at which the whole frame just fits inside the viewer. Never more than 1.
+    var fitZoom: CGFloat {
+        guard videoSize.width > 0, videoSize.height > 0 else { return 1 }
+        return min(containerSize.width / videoSize.width, containerSize.height / videoSize.height) / fillScale
     }
 
     private var center: CGPoint {
         CGPoint(x: containerSize.width / 2, y: containerSize.height / 2)
     }
 
-    /// The size of the whole frame when it is fitted into the viewer, before any zoom.
-    var fittedSize: CGSize {
-        CGSize(width: videoSize.width * fitScale, height: videoSize.height * fitScale)
+    /// The size of the whole frame when it fills the viewer, before any zoom.
+    var filledSize: CGSize {
+        CGSize(width: videoSize.width * fillScale, height: videoSize.height * fillScale)
     }
 
     func viewPoint(for videoPoint: CGPoint) -> CGPoint {
-        let fittedX = center.x + (videoPoint.x - videoSize.width / 2) * fitScale
-        let fittedY = center.y + (videoPoint.y - videoSize.height / 2) * fitScale
+        let fittedX = center.x + (videoPoint.x - videoSize.width / 2) * fillScale
+        let fittedY = center.y + (videoPoint.y - videoSize.height / 2) * fillScale
         return CGPoint(x: center.x + (fittedX - center.x) * zoom + offset.width, y: center.y + (fittedY - center.y) * zoom + offset.height)
     }
 
     func videoPoint(for viewPoint: CGPoint) -> CGPoint {
         let fittedX = center.x + (viewPoint.x - offset.width - center.x) / zoom
         let fittedY = center.y + (viewPoint.y - offset.height - center.y) / zoom
-        return CGPoint(x: videoSize.width / 2 + (fittedX - center.x) / fitScale, y: videoSize.height / 2 + (fittedY - center.y) / fitScale)
+        return CGPoint(x: videoSize.width / 2 + (fittedX - center.x) / fillScale, y: videoSize.height / 2 + (fittedY - center.y) / fillScale)
     }
 
     func contains(_ videoPoint: CGPoint) -> Bool {
@@ -51,13 +57,15 @@ struct VideoViewMapping {
     }
 }
 
-/// A single frame of a clip filling the whole screen, with pinch-to-zoom and panning.
+/// A single frame of a clip filling the whole screen, with pinch-to-zoom and panning. Whatever the fill
+/// crops can be reached by panning, or by pinching out until the whole frame fits.
 ///
 /// `overlay` is drawn over the frame at a constant size; use the mapping it is given to place things on the clip.
 /// Controls are meant to float above this view, so the frame can be dragged out from under them.
 struct VideoFrameViewer<Overlay: View>: View {
     let scrubber: VideoScrubber
-    /// Called with the tapped point on the clip, in pixels of the frame as it is shown.
+    /// Called with the tapped point on the clip, in pixels of the frame as it is shown. The point is
+    /// outside the frame's bounds when the tap lands beside the picture.
     var onTap: ((CGPoint) -> Void)? = nil
     @ViewBuilder var overlay: (VideoViewMapping) -> Overlay
 
@@ -66,7 +74,7 @@ struct VideoFrameViewer<Overlay: View>: View {
     @State private var offset: CGSize = .zero
     @State private var offsetAtGestureStart: CGSize = .zero
 
-    private let zoomRange: ClosedRange<CGFloat> = 1...8
+    private let maximumZoom: CGFloat = 8
     /// How far, as a fraction of the screen, the frame may be dragged past its edge to clear the controls.
     private let panAllowance: CGFloat = 0.3
 
@@ -77,10 +85,13 @@ struct VideoFrameViewer<Overlay: View>: View {
 
                 ZStack {
                     PlayerLayerView(player: scrubber.player)
-                        .frame(width: mapping.fittedSize.width, height: mapping.fittedSize.height)
+                        .frame(width: mapping.filledSize.width, height: mapping.filledSize.height)
                         .clipShape(.rect(cornerRadius: 24))
                         .scaleEffect(zoom)
                         .offset(offset)
+                        // Laid out at the screen's size even though the picture overhangs it, so the overlay
+                        // beside it keeps the screen's coordinates.
+                        .frame(width: geometry.size.width, height: geometry.size.height)
 
                     if scrubber.frames != nil {
                         overlay(mapping)
@@ -95,12 +106,9 @@ struct VideoFrameViewer<Overlay: View>: View {
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
                 .contentShape(.rect)
-                .gesture(magnifyGesture(in: geometry.size).simultaneously(with: panGesture(in: geometry.size)))
+                .gesture(magnifyGesture(mapping: mapping).simultaneously(with: panGesture(mapping: mapping)))
                 .onTapGesture { location in
-                    let videoPoint = mapping.videoPoint(for: location)
-                    if mapping.contains(videoPoint) {
-                        onTap?(videoPoint)
-                    }
+                    onTap?(mapping.videoPoint(for: location))
                 }
             }
             .coordinateSpace(VideoViewMapping.coordinateSpace)
@@ -125,11 +133,11 @@ struct VideoFrameViewer<Overlay: View>: View {
         }
     }
 
-    private func magnifyGesture(in size: CGSize) -> some Gesture {
+    private func magnifyGesture(mapping: VideoViewMapping) -> some Gesture {
         MagnifyGesture()
             .onChanged { value in
-                zoom = min(max(zoomAtGestureStart * value.magnification, zoomRange.lowerBound), zoomRange.upperBound)
-                offset = clampedOffset(offset, in: size)
+                zoom = min(max(zoomAtGestureStart * value.magnification, mapping.fitZoom), maximumZoom)
+                offset = clampedOffset(offset, mapping: mapping)
             }
             .onEnded { _ in
                 zoomAtGestureStart = zoom
@@ -137,10 +145,10 @@ struct VideoFrameViewer<Overlay: View>: View {
             }
     }
 
-    private func panGesture(in size: CGSize) -> some Gesture {
+    private func panGesture(mapping: VideoViewMapping) -> some Gesture {
         DragGesture()
             .onChanged { value in
-                offset = clampedOffset(CGSize(width: offsetAtGestureStart.width + value.translation.width, height: offsetAtGestureStart.height + value.translation.height), in: size)
+                offset = clampedOffset(CGSize(width: offsetAtGestureStart.width + value.translation.width, height: offsetAtGestureStart.height + value.translation.height), mapping: mapping)
             }
             .onEnded { _ in
                 offsetAtGestureStart = offset
@@ -148,9 +156,11 @@ struct VideoFrameViewer<Overlay: View>: View {
     }
 
     /// Keeps most of the frame on screen, so it can't be dragged out of sight.
-    private func clampedOffset(_ offset: CGSize, in size: CGSize) -> CGSize {
-        let maxX = ((zoom - 1) / 2 + panAllowance) * size.width
-        let maxY = ((zoom - 1) / 2 + panAllowance) * size.height
+    private func clampedOffset(_ offset: CGSize, mapping: VideoViewMapping) -> CGSize {
+        let size = mapping.containerSize
+        // How far the zoomed frame overhangs the screen on each side, plus the allowance.
+        let maxX = max(mapping.filledSize.width * zoom - size.width, 0) / 2 + panAllowance * size.width
+        let maxY = max(mapping.filledSize.height * zoom - size.height, 0) / 2 + panAllowance * size.height
         return CGSize(width: min(max(offset.width, -maxX), maxX), height: min(max(offset.height, -maxY), maxY))
     }
 

@@ -53,7 +53,7 @@ struct StandbyStepView: View {
                 .alignView(to: .leading)
                 .alignViewVertically(to: .bottom)
 
-            GlassButton(text: "Back", style: .secondary, perform: onBack)
+            GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)
                 .padding()

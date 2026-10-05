@@ -77,18 +77,15 @@ struct CompletedStepView: View {
                 HStack {
                     if let url = csvURL {
                         ShareLink(item: url, preview: SharePreview("Accelab Data", icon: Image(systemName: "tablecells"))) {
-                            Label("Export CSV", systemImage: "square.and.arrow.up")
-                                .customFont(.title3, weight: .medium)
-                                .padding(.vertical, 5)
-                                .padding(.horizontal, 20)
+                            GlassIconLabel(systemImage: "square.and.arrow.up", title: "Export CSV", style: .prominent)
                         }
-                        .buttonStyle(.glassProminent)
+                        .buttonStyle(.plain)
                     } else {
                         // Only reachable if writing the temp file failed.
-                        GlassButton(text: "Retry Export", perform: onRetryExport)
+                        GlassIconButton(systemImage: "arrow.clockwise", title: "Retry Export", label: "Retry Export", style: .prominent, perform: onRetryExport)
                     }
 
-                    GlassButton(text: "Done", style: .secondary) {
+                    GlassIconButton(systemImage: "checkmark", label: "Done") {
                         self.isShowingConfirmationDialogToExit = true
                     }
                     .confirmationDialog("This will reset all your data and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmationDialogToExit, titleVisibility: .visible) {

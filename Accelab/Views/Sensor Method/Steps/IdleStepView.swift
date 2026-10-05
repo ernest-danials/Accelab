@@ -28,12 +28,12 @@ struct IdleStepView: View {
             .foregroundStyle(.green2.gradient)
             .rotationEffect(.degrees(-20))
 
-            GlassButton(text: "Change Method", style: .secondary, perform: onChangeMethod)
+            GlassIconButton(systemImage: "chevron.backward", label: "Change Method", perform: onChangeMethod)
                 .alignView(to: .leading)
                 .alignViewVertically(to: .bottom)
                 .padding()
 
-            GlassButton(text: "Start", perform: onStart)
+            GlassIconButton(systemImage: "play.fill", title: "Start", label: "Start", style: .prominent, perform: onStart)
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)
                 .padding()

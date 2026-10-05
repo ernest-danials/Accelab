@@ -49,9 +49,9 @@ struct SetupStepView: View {
 
             GlassEffectContainer {
                 HStack {
-                    GlassButton(text: "Back", style: .secondary, perform: onBack)
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
 
-                    GlassButton(text: "Continue", perform: onContinue)
+                    GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, perform: onContinue)
                 }
             }
             .alignView(to: .trailing)

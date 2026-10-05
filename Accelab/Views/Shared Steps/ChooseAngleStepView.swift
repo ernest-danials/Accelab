@@ -57,7 +57,7 @@ struct ChooseAngleStepView: View {
 
             GlassEffectContainer {
                 HStack {
-                    GlassButton(text: "Cancel", style: .secondary) {
+                    GlassIconButton(systemImage: "xmark", label: "Cancel") {
                         if self.desiredAngle == Self.defaultAngle {
                             onCancel()
                         } else {
@@ -69,7 +69,7 @@ struct ChooseAngleStepView: View {
                     }
 
                     if let onSkip {
-                        GlassButton(text: "Skip", style: .secondary) {
+                        GlassIconButton(systemImage: "forward.end", title: "Skip", label: "Skip") {
                             self.isShowingConfirmationDialogToSkip = true
                         }
                         .confirmationDialog("Without this step, Accelab won't help you set the slope of your track, and your results won't include an angle. Are you sure?", isPresented: $isShowingConfirmationDialogToSkip, titleVisibility: .visible) {
@@ -77,7 +77,7 @@ struct ChooseAngleStepView: View {
                         }
                     }
 
-                    GlassButton(text: "Continue", perform: onContinue)
+                    GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, perform: onContinue)
                 }
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)
