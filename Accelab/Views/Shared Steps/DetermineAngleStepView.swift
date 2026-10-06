@@ -18,6 +18,12 @@ struct DetermineAngleStepView: View {
     /// Called with the angle captured at the moment the user continues.
     let onContinue: (Double) -> Void
 
+    /// How long the angle must stay within the margin before the step continues on its own.
+    private static let holdSeconds = 3
+
+    /// Seconds left of the current hold within the margin; `nil` while the angle is outside it.
+    @State private var holdCountdownValue: Int? = nil
+
     var body: some View {
         ZStack {
             HStack {
@@ -63,16 +69,59 @@ struct DetermineAngleStepView: View {
             .alignView(to: .leading)
             .alignViewVertically(to: .bottom)
 
-            HStack {
-                GlassButton(text: "Back", style: .secondary, perform: onBack)
+            if let holdCountdownValue {
+                VStack(spacing: 0) {
+                    Text("\(holdCountdownValue)")
+                        .font(.system(size: 100, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: true))
 
-                GlassButton(text: "Continue", isDisabled: !isAngleReadyToCapture) {
-                    onContinue(angleManager.currentAngle)
+                    Text("Hold Steady")
+                        .customFont(.headline, weight: .bold)
                 }
+                .padding(.horizontal, 30)
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .top)
+                .transition(.blurReplace)
             }
-            .alignView(to: .trailing)
-            .alignViewVertically(to: .bottom)
-            .padding()
+
+            GlassEffectContainer {
+                HStack {
+                    GlassIconButton(systemImage: "chevron.backward", label: "Back", perform: onBack)
+
+                    GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, isDisabled: !isAngleReadyToCapture) {
+                        onContinue(angleManager.currentAngle)
+                    }
+                }
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .bottom)
+                .padding()
+            }
+        }
+        // Restarts whenever the angle enters or leaves the margin, so only an unbroken hold continues.
+        .task(id: isAngleReadyToCapture) {
+            withAnimation {
+                self.holdCountdownValue = isAngleReadyToCapture ? Self.holdSeconds : nil
+            }
+
+            guard isAngleReadyToCapture else { return }
+
+            // Felt without looking, while both hands are on the track.
+            Haptics.tick()
+
+            while let value = self.holdCountdownValue, value > 0 {
+                do {
+                    try await Task.sleep(for: .seconds(1))
+                } catch {
+                    return
+                }
+
+                withAnimation { self.holdCountdownValue = value - 1 }
+                if value > 1 { Haptics.tick() }
+            }
+
+            Haptics.success()
+            onContinue(angleManager.currentAngle)
         }
         .overlay {
             if isShowingDeviceOrientationNotValidDisclaimer {

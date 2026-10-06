@@ -22,7 +22,7 @@ struct CountdownStepView: View {
                 .contentTransition(.numericText(countsDown: true))
                 .offset(y: 15)
 
-            GlassButton(text: "Cancel", style: .secondary, perform: onCancel)
+            GlassIconButton(systemImage: "xmark", label: "Cancel", perform: onCancel)
                 .alignView(to: .trailing)
                 .alignViewVertically(to: .bottom)
                 .padding()
@@ -39,8 +39,11 @@ struct CountdownStepView: View {
                 }
 
                 withAnimation { self.countdownValue -= 1 }
+                if self.countdownValue > 0 { Haptics.tick() }
             }
 
+            // Felt through the cart, this is the cue to let go.
+            Haptics.heavyTap()
             onFinished()
         }
     }

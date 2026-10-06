@@ -6,14 +6,37 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct AccelabApp: App {
+    @State private var angleManager: AngleManager = .init()
+    @State private var motionMeasuringManager: MotionMeasuringManager = .init()
+    @State private var cameraCaptureManager: CameraCaptureManager = .init()
+    @State private var methodManager: MethodManager = .init()
+    
     var body: some Scene {
         WindowGroup {
-            SensorMethodView()
-                .environment(AngleManager())
-                .environment(MotionMeasuringManager())
+            Group {
+                if let currentMethod = methodManager.currentMethod {
+                    switch currentMethod {
+                    case .camera:
+                        CameraMethodView()
+                    case .sensor:
+                        SensorMethodView()
+                    }
+                } else {
+                    SelectMethodView()
+                }
+            }
+            .onOpenURL { url in
+                methodManager.open(url)
+            }
         }
+        .environment(angleManager)
+        .environment(motionMeasuringManager)
+        .environment(cameraCaptureManager)
+        .environment(methodManager)
+        .modelContainer(for: SavedRun.self)
     }
 }

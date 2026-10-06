@@ -1,5 +1,5 @@
 //
-//  Step.swift
+//  SensorMethodStep.swift
 //  Accelab
 //
 //  Created by Myung Joon Kang on 2025-09-21.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Step: CaseIterable, Identifiable {
+enum SensorMethodStep: CaseIterable, Identifiable {
     case idle, chooseAngle, determineAngle, standby, countdown, measuring, completed
     
     var id: Self { self }
@@ -15,7 +15,7 @@ enum Step: CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .idle:
-            return "Accelab"
+            return Method.sensor.rawValue
         case .chooseAngle:
             return "Choose the Angle"
         case .determineAngle:
@@ -34,7 +34,7 @@ enum Step: CaseIterable, Identifiable {
     var subtitle: String {
         switch self {
         case .idle:
-            return "Welcome to"
+            return ""
         case .chooseAngle:
             return "Step 1"
         case .determineAngle:
@@ -53,7 +53,7 @@ enum Step: CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .idle:
-            return ""
+            return Method.sensor.description
         case .chooseAngle:
             return "Choose the desired slope of your track."
         case .determineAngle:
@@ -65,7 +65,7 @@ enum Step: CaseIterable, Identifiable {
         case .measuring:
             return "Accelab is recording the motion of your cart as it travels down the track."
         case .completed:
-            return "Your lab data is ready for analysis! Make sure to save it before exiting."
+            return "Your lab data is ready for analysis! It's saved in Past Runs."
         }
     }
 }

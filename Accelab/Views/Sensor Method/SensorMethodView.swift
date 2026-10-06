@@ -1,40 +1,50 @@
 //
-//  ContentView.swift
+//  SensorMethodView.swift
 //  Accelab
 //
 //  Created by Myung Joon Kang on 2025-09-20.
 //
 
 import SwiftUI
+import SwiftData
 
 struct SensorMethodView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(MotionMeasuringManager.self) private var measuringManager: MotionMeasuringManager
+    @Environment(MethodManager.self) private var methodManager: MethodManager
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.modelContext) private var modelContext
 
-    @State private var currentStep: Step = .idle
+    @State private var currentStep: SensorMethodStep = .idle
 
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
-    @State private var isShowingDeviceOrientationNotValidDisclaimer: Bool = false
 
     @AppStorage(AppStorageKey.marginOfErrorForAngle.rawValue) private var marginOfErrorForAngle: Double = 0.1
     @State private var desiredAngle: Double = ChooseAngleStepView.defaultAngle
     @State private var capturedAngle: Double? = nil
+    @State private var isAngleSkipped: Bool = false
 
     @State private var csvURL: URL? = nil
-
-    @State private var isShowingSettingsView: Bool = false
-    @State private var isShowingWhatIsAccelabView: Bool = false
+    @State private var desmosURL: URL? = nil
+    /// The current run in the past runs, once it has finished.
+    @State private var savedRun: SavedRun? = nil
 
     var body: some View {
         ZStack {
-            stepTitleView(for: currentStep)
+            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle)
 
             switch currentStep {
             case .idle:
-                IdleStepView(onShowWhatIsAccelab: { self.isShowingWhatIsAccelabView = true }, onShowSettings: { self.isShowingSettingsView = true }, onStart: { changeCurrentStep(to: .chooseAngle) })
+                IdleStepView(onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: .chooseAngle) })
             case .chooseAngle:
-                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: { changeCurrentStep(to: .determineAngle) })
+                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: {
+                    self.isAngleSkipped = false
+                    changeCurrentStep(to: .determineAngle)
+                }, onSkip: {
+                    self.isAngleSkipped = true
+                    self.capturedAngle = nil
+                    changeCurrentStep(to: .standby)
+                })
             case .determineAngle:
                 DetermineAngleStepView(desiredAngle: desiredAngle, marginOfErrorForAngle: marginOfErrorForAngle, currentDeviceOrientation: currentDeviceOrientation, isAngleReadyToCapture: isAngleReadyToCapture, isShowingDeviceOrientationNotValidDisclaimer: isShowingDeviceOrientationNotValidDisclaimer, onBack: {
                     self.capturedAngle = nil
@@ -44,27 +54,20 @@ struct SensorMethodView: View {
                     changeCurrentStep(to: .standby)
                 })
             case .standby:
-                StandbyStepView(currentDeviceOrientation: currentDeviceOrientation, onBegin: { changeCurrentStep(to: .countdown) }, onBack: { changeCurrentStep(to: .determineAngle) })
+                StandbyStepView(currentDeviceOrientation: currentDeviceOrientation, onBegin: { changeCurrentStep(to: .countdown) }, onBack: { changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle) })
             case .countdown:
                 CountdownStepView(onCancel: { changeCurrentStep(to: .standby) }, onFinished: startMeasuring)
             case .measuring:
                 MeasuringStepView(splits: measuringManager.splits, onDiscard: discardMeasuring, onDone: finishMeasuring)
             case .completed:
-                CompletedStepView(desiredAngle: desiredAngle, capturedAngle: capturedAngle, splits: measuringManager.splits, csvURL: csvURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
+                CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: measuringManager.splits, csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
         }
         // Check the step first so the body only observes `currentAngle` while determining the angle.
         .background((currentStep == .determineAngle && isAngleReadyToCapture) ? .green3.opacity(0.5) : .clear)
         .onDeviceRotation { newOrientation in
-            withAnimation {
-                if newOrientation.isValidInterfaceOrientation {
-                    self.currentDeviceOrientation = newOrientation
-                    self.isShowingDeviceOrientationNotValidDisclaimer = false
-                } else {
-                    self.isShowingDeviceOrientationNotValidDisclaimer = true
-                }
-            }
-            updateAngleUpdates()
+            guard newOrientation.isLandscape else { return }
+            withAnimation { self.currentDeviceOrientation = newOrientation }
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .background else { return }
@@ -84,41 +87,9 @@ struct SensorMethodView: View {
                 break
             }
         }
-        .fullScreenCover(isPresented: $isShowingSettingsView) {
-            SettingsView()
-        }
-        .fullScreenCover(isPresented: $isShowingWhatIsAccelabView) {
-            WhatIsAccelabView()
-        }
     }
 
-    @ViewBuilder
-    private func stepTitleView(for step: Step) -> some View {
-        VStack(alignment: .leading) {
-            if !step.subtitle.isEmpty {
-                Text(step.subtitle)
-                    .customFont(step == .idle ? .title3 : .subheadline)
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
-            }
-
-            Text(step.title)
-                .customFont(step == .idle ? .largeTitle : .title3, weight: .bold)
-                .contentTransition(.numericText())
-
-            if !step.description.isEmpty {
-                Text(step.description)
-                    .customFont(.footnote)
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
-            }
-        }
-        .alignView(to: .leading)
-        .alignViewVertically(to: .top)
-        .padding(30)
-    }
-
-    private func changeCurrentStep(to step: Step) {
+    private func changeCurrentStep(to step: SensorMethodStep) {
         withAnimation {
             self.currentStep = step
         }
@@ -129,9 +100,9 @@ struct SensorMethodView: View {
         UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .standby, .countdown, .measuring].contains(step)
     }
 
-    /// Runs angle updates only while determining the angle with the phone held upright.
+    /// Runs angle updates only while determining the angle.
     private func updateAngleUpdates() {
-        if currentStep == .determineAngle && !isShowingDeviceOrientationNotValidDisclaimer {
+        if currentStep == .determineAngle {
             angleManager.start()
         } else {
             angleManager.stop()
@@ -150,6 +121,21 @@ struct SensorMethodView: View {
         measuringManager.stop()
         changeCurrentStep(to: .completed)
         exportCSV()
+        saveRun()
+    }
+
+    /// Keeps the finished run in the past runs. It stays there after `resetRun()`.
+    private func saveRun() {
+        let splits = measuringManager.splits
+        guard !splits.isEmpty else { return }
+
+        if let savedRun {
+            savedRun.update(splits: splits)
+        } else {
+            let run = SavedRun(method: .sensor, desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits)
+            modelContext.insert(run)
+            self.savedRun = run
+        }
     }
 
     /// Throws away the collected data but keeps the angle, so the run can be repeated.
@@ -161,14 +147,23 @@ struct SensorMethodView: View {
     /// Clears everything belonging to the current run: collected data, angles, and exported files.
     private func resetRun() {
         measuringManager.reset()
+        self.savedRun = nil
         self.desiredAngle = ChooseAngleStepView.defaultAngle
         self.capturedAngle = nil
+        self.isAngleSkipped = false
         CSVExporter.removeTempFiles()
         self.csvURL = nil
+        self.desmosURL = nil
     }
 
     private func exportCSV() {
         self.csvURL = CSVExporter.writeTempFile(for: measuringManager.splits)
+        self.desmosURL = CSVExporter.writeDesmosTempFile(for: measuringManager.splits)
+    }
+
+    /// The angle can't be read while the phone is lying flat.
+    private var isShowingDeviceOrientationNotValidDisclaimer: Bool {
+        angleManager.isFlat
     }
 
     private var isAngleReadyToCapture: Bool {
@@ -180,4 +175,6 @@ struct SensorMethodView: View {
     SensorMethodView()
         .environment(AngleManager())
         .environment(MotionMeasuringManager())
+        .environment(MethodManager())
+        .modelContainer(for: SavedRun.self, inMemory: true)
 }

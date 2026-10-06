@@ -1,13 +1,20 @@
 # Accelab
-Accelab is an educational application developed using SwiftUI. It aims to help students collect distance-time data of a cart on an air track lab.
+Accelab is an educational iPhone application developed using SwiftUI. It aims to help students collect distance-time data of a cart on an air track lab, either by filming the cart or by attaching the iPhone to it.
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ernest-danials/Accelab)
+
+## Methods
+- **Camera (recommended):** film the cart with your iPhone, or choose a video you already have. Trim the clip, mark any known length in the shot for scale, then let Accelab track the cart automatically or mark it by hand.
+- **Sensor:** attach your iPhone to the cart and measure its motion with the built-in sensors.
 
 ## Features
 - Choose a target angle of the track.
 - Measure the actual angle so that it matches the target angle.
-- Collect distance-time data.
-- Export data as CSV.
+- Collect distance-time data with either method.
+- Check the tracked points on the video and correct any of them by hand.
+- Preview the data as a table, export it as CSV, or copy it for Desmos.
+- Save the video of a camera run and a photo with every tracked point marked on it.
+- Come back to finished runs later in Past Runs.
 
 ## Websites
 - [Project Website](https://myungjoon.com/accelab)

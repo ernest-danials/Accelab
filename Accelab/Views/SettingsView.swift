@@ -6,15 +6,25 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    
+    @Query private var runs: [SavedRun]
+    
+    @State private var isShowingConfirmationDialogToDeleteRuns: Bool = false
     
     @AppStorage(AppStorageKey.marginOfErrorForAngle.rawValue) private var marginOfErrorForAngle: Double = 0.1
     
     var body: some View {
         NavigationStack {
             Form {
+                Section("About") {
+                    Text("Accelab helps you run an air-track lab. Set the track to the angle you chose, then get the cart's distance–time data by filming the cart with the Camera method, or by strapping your iPhone to it with the Sensor method. Export the data as CSV or for Desmos, and find your finished runs in Past Runs.")
+                }
+                
                 Section {
                     Picker("Margin of Error for Angle", systemImage: "plusminus", selection: $marginOfErrorForAngle) {
                         ForEach(AngleMarginOfError.allCases) { margin in
@@ -23,7 +33,32 @@ struct SettingsView: View {
                         }
                     }
                 } footer: {
-                    Text("The angle difference between the measured and target angle must be within this margin of error.")
+                    Text("When you set the track's angle, in either method, the measured angle must be within this margin of the target angle.")
+                }
+                
+                Section {
+                    LabeledContent("Saved Runs", value: "\(runs.count)")
+                    
+                    Button(role: .destructive) {
+                        self.isShowingConfirmationDialogToDeleteRuns = true
+                    } label: {
+                        // Coloured here: in a form the icon takes the accent colour, and neither part dims when disabled.
+                        Label {
+                            Text("Delete All Past Runs")
+                        } icon: {
+                            Image(systemName: "trash")
+                                .foregroundStyle(runs.isEmpty ? Color.secondary : Color.red)
+                        }
+                        .foregroundStyle(runs.isEmpty ? Color.secondary : Color.red)
+                    }
+                    .disabled(runs.isEmpty)
+                    .confirmationDialog(runs.count == 1 ? "This will delete your past run. Are you sure?" : "This will delete all \(runs.count) past runs. Are you sure?", isPresented: $isShowingConfirmationDialogToDeleteRuns, titleVisibility: .visible) {
+                        Button("Yes, delete", role: .destructive, action: deleteAllRuns)
+                    }
+                } header: {
+                    Text("Past Runs")
+                } footer: {
+                    Text("Runs you finish are saved automatically. Videos aren't kept.")
                 }
                 
                 Section {
@@ -53,7 +88,7 @@ struct SettingsView: View {
                         Label("Privacy Policy", systemImage: "hand.raised.fill")
                     }
                 } footer: {
-                    Text("Version: \(Bundle.main.versionBuildString) \nCopyright © 2025 Myung-Joon Kang. All rights reserved.")
+                    Text("Version: \(Bundle.main.versionBuildString) \nCopyright © 2025–2026 Myung-Joon Kang. All rights reserved.")
                 }
             }
             .navigationTitle("Settings")
@@ -67,8 +102,16 @@ struct SettingsView: View {
             }
         }
     }
+    
+    private func deleteAllRuns() {
+        for run in runs {
+            modelContext.delete(run)
+        }
+        Haptics.success()
+    }
 }
 
 #Preview {
     SettingsView()
+        .modelContainer(for: SavedRun.self, inMemory: true)
 }
