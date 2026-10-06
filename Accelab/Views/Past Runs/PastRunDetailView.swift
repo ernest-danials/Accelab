@@ -34,6 +34,7 @@ struct PastRunDetailView: View {
                     GlassIconButton(systemImage: "trash", label: "Delete Run") {
                         self.isShowingConfirmationDialogToDelete = true
                     }
+                    .foregroundStyle(.red)
                     .confirmationDialog("This will delete this run. Are you sure?", isPresented: $isShowingConfirmationDialogToDelete, titleVisibility: .visible) {
                         Button("Yes, delete", role: .destructive, action: deleteRun)
                     }
