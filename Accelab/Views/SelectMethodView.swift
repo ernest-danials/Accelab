@@ -18,7 +18,6 @@ struct SelectMethodView: View {
     @State private var headerExpandTask: Task<Void, Never>? = nil
     
     @State private var isShowingSettingsView: Bool = false
-    @State private var isShowingWhatIsAccelabView: Bool = false
     @State private var isShowingPastRunsView: Bool = false
     
     var body: some View {
@@ -74,12 +73,6 @@ struct SelectMethodView: View {
             pageIndicator
                 .padding(.bottom, 12)
         }
-        .overlay(alignment: .bottomLeading) {
-            GlassIconButton(systemImage: "questionmark", label: "What is Accelab?") {
-                self.isShowingWhatIsAccelabView = true
-            }
-            .padding()
-        }
         .overlay(alignment: .bottomTrailing) {
             GlassIconButton(systemImage: "gearshape", label: "Settings") {
                 self.isShowingSettingsView = true
@@ -88,9 +81,6 @@ struct SelectMethodView: View {
         }
         .fullScreenCover(isPresented: $isShowingSettingsView) {
             SettingsView()
-        }
-        .fullScreenCover(isPresented: $isShowingWhatIsAccelabView) {
-            WhatIsAccelabView()
         }
         .fullScreenCover(isPresented: $isShowingPastRunsView, onDismiss: removePastRunExports) {
             PastRunsView()

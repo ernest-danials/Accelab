@@ -237,8 +237,8 @@ struct CameraMethodView: View {
         let run = savedRun
         self.photoTask = Task {
             let url = await RunMediaExporter.makePhotoFile(from: scrubber.url, frames: frames, points: points)
-            // The saved run keeps the photo even if this run was reset before it was drawn.
-            if let url, let run, !Task.isCancelled || run.photo == nil, let data = try? Data(contentsOf: url) {
+            // The saved run keeps the photo even if this run was reset before it was drawn, unless it was deleted meanwhile.
+            if let url, let run, !run.isDeleted, run.modelContext != nil, !Task.isCancelled || run.photo == nil, let data = try? Data(contentsOf: url) {
                 run.photo = data
             }
             // Cancelled when the run was reset first, after which nothing would remove the photo.
