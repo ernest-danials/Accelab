@@ -17,15 +17,20 @@ struct AccelabApp: App {
     
     var body: some Scene {
         WindowGroup {
-            if let currentMethod = methodManager.currentMethod {
-                switch currentMethod {
-                case .camera:
-                    CameraMethodView()
-                case .sensor:
-                    SensorMethodView()
+            Group {
+                if let currentMethod = methodManager.currentMethod {
+                    switch currentMethod {
+                    case .camera:
+                        CameraMethodView()
+                    case .sensor:
+                        SensorMethodView()
+                    }
+                } else {
+                    SelectMethodView()
                 }
-            } else {
-                SelectMethodView()
+            }
+            .onOpenURL { url in
+                methodManager.open(url)
             }
         }
         .environment(angleManager)
