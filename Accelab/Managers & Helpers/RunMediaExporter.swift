@@ -6,8 +6,8 @@
 import AVFoundation
 import UIKit
 
-/// Makes the shareable media of a camera run in the temporary directory: the recorded clip under a
-/// readable name, and a photo of the last tracked frame with every tracked point drawn on it.
+/// Makes the shareable media of a run filmed with the camera in the temporary directory: the recorded
+/// clip under a readable name, and a photo of the last tracked frame with every tracked point drawn on it.
 nonisolated enum RunMediaExporter {
     private static let filePrefix = "accelab-run-"
 

@@ -26,8 +26,9 @@ struct PastRunDetailView: View {
     init(run: SavedRun) {
         self.run = run
         // Empty until the samples are loaded, but already the run's own kind, so the summary doesn't
-        // open on the other kind's layout.
-        self._data = State(initialValue: run.heights == nil ? .distance([]) : .position([]))
+        // open on the other kind's layout. Asked of the method rather than the samples: a list builds
+        // this view for every row, which shouldn't load each run's arrays.
+        self._data = State(initialValue: run.method == .projectile ? .position([]) : .distance([]))
     }
 
     var body: some View {
