@@ -13,7 +13,7 @@ struct PastRunDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @State private var data: RunData = .distance([])
+    @State private var data: RunData
     @State private var csvURL: URL? = nil
     @State private var desmosURL: URL? = nil
     @State private var photo: UIImage? = nil
@@ -22,6 +22,13 @@ struct PastRunDetailView: View {
     @State private var runBeingRenamed: SavedRun? = nil
     @State private var isShowingPhoto: Bool = false
     @State private var isShowingConfirmationDialogToDelete: Bool = false
+
+    init(run: SavedRun) {
+        self.run = run
+        // Empty until the samples are loaded, but already the run's own kind, so the summary doesn't
+        // open on the other kind's layout.
+        self._data = State(initialValue: run.heights == nil ? .distance([]) : .position([]))
+    }
 
     var body: some View {
         ZStack {

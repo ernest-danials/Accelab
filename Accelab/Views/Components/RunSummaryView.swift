@@ -132,10 +132,11 @@ struct RunSummaryView: View {
         }
     }
 
-    /// A length to the centimetre. A value that rounds to nothing loses its minus sign.
+    /// A length to the centimetre, written for the user's region like the numbers beside it. A value that
+    /// rounds to nothing loses its minus sign.
     private static func lengthText(for meters: Double) -> String {
-        let text = String(format: "%.2f", meters)
-        return text == "-0.00" ? "0.00" : text
+        let rounded = (meters * 100).rounded() / 100
+        return String(format: "%.2f", locale: .current, rounded == 0 ? 0 : rounded)
     }
 }
 

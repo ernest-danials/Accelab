@@ -155,14 +155,14 @@ struct TrackStepView: View {
 
         switch mode {
         case .choosing:
-            return isProjectile ? "Go to the frame where the ball is launched, then choose how to follow it. Its first point becomes the origin." : "Go to the frame where the \(subject) is released, then choose how to follow it."
+            return "Go to the frame where the \(subject) is \(isProjectile ? "launched" : "released"), then choose how to follow it."
         case .drawingBox:
             if didFailToTrack { return "Couldn't follow the \(subject). Fit the box more tightly and press Start, or mark it by hand instead." }
             return box == nil ? "Drag a box around the \(subject) on this frame." : "Drag the corners until the box fits the \(subject) tightly, then press Start."
         case .tracking:
             return "Following the \(subject) through the video…"
         case .marking:
-            if points.isEmpty { return isProjectile ? "Tap the centre of the ball." : "Tap the \(subject). Pick a spot you can find again on every frame." }
+            if points.isEmpty { return isProjectile ? "Tap the centre of the ball. This first point becomes the origin." : "Tap the \(subject). Pick a spot you can find again on every frame." }
             if points.count < Self.minimumPointCount { return isProjectile ? "Tap the centre of the ball again. The video moves on after each tap." : "Tap the same spot again. The video moves on after each tap." }
             return isProjectile ? "Keep tapping the ball until the flight is covered, then press ✓." : "Keep tapping the same spot until the run is covered, then press ✓."
         case .viewing:
@@ -514,7 +514,7 @@ private struct ProjectileAxes: View {
         .frame(width: reach, height: reach)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Origin and axes")
+        .accessibilityLabel(xDirection < 0 ? "Origin and axes: x counts up towards the left, y upwards" : "Origin and axes: x counts up towards the right, y upwards")
     }
 
     /// A thin white line with a dark outline beneath it, so it reads over light and dark footage alike.
