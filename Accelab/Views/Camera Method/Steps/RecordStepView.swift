@@ -9,6 +9,9 @@ import SwiftUI
 struct RecordStepView: View {
     let experiment: CameraExperiment
     let captureManager: CameraCaptureManager
+    /// How far from level the phone may be before the readout calls it tilted. `nil` when being level
+    /// doesn't matter (a cart on a track), which leaves the readout out.
+    let levelMargin: Double?
     let onBack: () -> Void
     let onRecord: () -> Void
     let onStop: () -> Void
@@ -40,13 +43,21 @@ struct RecordStepView: View {
                             }
                         }
                     } else {
-                        PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
-                            GlassIconLabel(systemImage: "photo.on.rectangle")
+                        HStack(spacing: 8) {
+                            // The phone was levelled a step ago, and can shift when it is let go of or the
+                            // record button is pressed. Only while the camera is the one filming.
+                            if let levelMargin, isCameraRunning {
+                                LevelStatusLabel(margin: levelMargin)
+                            }
+
+                            PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
+                                GlassIconLabel(systemImage: "photo.on.rectangle")
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isRecording)
+                            .opacity(isRecording ? 0.5 : 1)
+                            .accessibilityLabel("Choose from Photos")
                         }
-                        .buttonStyle(.plain)
-                        .disabled(isRecording)
-                        .opacity(isRecording ? 0.5 : 1)
-                        .accessibilityLabel("Choose from Photos")
                     }
 
                     if didFailToImport {
@@ -183,5 +194,28 @@ struct RecordStepView: View {
         }
         .foregroundStyle(.white)
         .padding()
+    }
+}
+
+/// Whether the phone is still level, and by how much it isn't. A view of its own so that the angle, which
+/// changes many times a second, redraws only this label.
+private struct LevelStatusLabel: View {
+    @Environment(AngleManager.self) private var angleManager: AngleManager
+
+    let margin: Double
+
+    var body: some View {
+        // Lying flat, the tilt of the long edge can't be read.
+        if !angleManager.isFlat {
+            GlassStatusLabel {
+                if angleManager.isCurrentAngleWithinMargin(targetAngle: 0, margin: margin) {
+                    Label("Level", systemImage: "checkmark")
+                } else {
+                    Label("Tilted \(angleManager.currentAngle, specifier: "%.2f")°", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                        .contentTransition(.numericText(value: angleManager.currentAngle))
+                }
+            }
+        }
     }
 }

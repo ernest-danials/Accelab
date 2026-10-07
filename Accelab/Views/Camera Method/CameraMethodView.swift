@@ -83,7 +83,7 @@ struct CameraMethodView: View {
             case .level:
                 LevelStepView(marginOfErrorForAngle: marginOfErrorForAngle, currentDeviceOrientation: currentDeviceOrientation, isLevel: isLevel, isShowingDeviceOrientationNotValidDisclaimer: isShowingDeviceOrientationNotValidDisclaimer, onBack: { changeCurrentStep(to: .setup) }, onSkip: { changeCurrentStep(to: .record) }, onContinue: { changeCurrentStep(to: .record) })
             case .record:
-                RecordStepView(experiment: experiment, captureManager: captureManager, onBack: { changeCurrentStep(to: experiment.measuresAngle ? .setup : .level) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
+                RecordStepView(experiment: experiment, captureManager: captureManager, levelMargin: experiment.measuresAngle ? nil : marginOfErrorForAngle, onBack: { changeCurrentStep(to: experiment.measuresAngle ? .setup : .level) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
                     loadClip(at: url, isImported: true)
                     changeCurrentStep(to: .trim)
                 })
@@ -144,9 +144,10 @@ struct CameraMethodView: View {
         UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .level, .record].contains(step)
     }
 
-    /// Runs angle updates only while the angle is on screen: the track's, or the phone's own when it is levelled.
+    /// Runs angle updates only while the angle is on screen: the track's, or the phone's own while it is
+    /// levelled and while a projectile is filmed, where the record step shows whether it is still level.
     private func updateAngleUpdates() {
-        if currentStep == .determineAngle || currentStep == .level {
+        if currentStep == .determineAngle || currentStep == .level || (currentStep == .record && !experiment.measuresAngle) {
             angleManager.start()
         } else {
             angleManager.stop()
