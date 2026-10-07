@@ -10,7 +10,6 @@ import SwiftUI
 /// projectile.
 /// The numbers are ready at once; the pause is there so the result reads as worked out rather than abrupt.
 struct AnalyzeStepView: View {
-    let method: Method
     let data: RunData
     let onFinished: () -> Void
 
@@ -37,7 +36,7 @@ struct AnalyzeStepView: View {
 
                     curve
                         .trim(from: 0, to: progress)
-                        .stroke(method.color, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
+                        .stroke(Method.camera.color, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
                         .frame(width: Self.graphSize.width, height: Self.graphSize.height)
                         .padding(.leading, 6)
                         .padding(.bottom, 6)

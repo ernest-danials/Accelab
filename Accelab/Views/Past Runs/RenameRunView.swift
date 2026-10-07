@@ -25,7 +25,7 @@ struct RenameRunView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("\(run.method.rawValue) Run", text: $name)
+                    TextField(run.defaultTitle, text: $name)
                         .focused($isNameFocused)
                         .submitLabel(.done)
                         .onSubmit(save)

@@ -26,9 +26,9 @@ struct PastRunDetailView: View {
     init(run: SavedRun) {
         self.run = run
         // Empty until the samples are loaded, but already the run's own kind, so the summary doesn't
-        // open on the other kind's layout. Asked of the method rather than the samples: a list builds
+        // open on the other kind's layout. Asked of the run rather than of its samples: a list builds
         // this view for every row, which shouldn't load each run's arrays.
-        self._data = State(initialValue: run.method == .projectile ? .position([]) : .distance([]))
+        self._data = State(initialValue: run.isProjectile ? .position([]) : .distance([]))
     }
 
     var body: some View {
@@ -49,7 +49,7 @@ struct PastRunDetailView: View {
 
                     Spacer()
 
-                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: run.method.usesCamera, photoURL: photoURL, onRetryExport: exportFiles)
+                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: run.method == .camera, photoURL: photoURL, onRetryExport: exportFiles)
                 }
                 .alignViewVertically(to: .bottom)
                 .padding()

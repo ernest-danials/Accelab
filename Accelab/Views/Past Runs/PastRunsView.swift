@@ -54,7 +54,7 @@ struct PastRunsView: View {
 
     private func row(for run: SavedRun) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: run.method.imageName)
+            Image(systemName: run.imageName)
                 .customFont(.title3, weight: .medium)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(run.method.color)
@@ -77,7 +77,7 @@ struct PastRunsView: View {
                     .monospacedDigit()
 
                 Group {
-                    if !run.method.measuresAngle {
+                    if run.isProjectile {
                         // So the number above isn't taken for the length of the path.
                         Text("Horizontal distance")
                     } else if let desiredAngle = run.desiredAngle {

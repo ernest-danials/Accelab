@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct TrimStepView: View {
-    let method: Method
+    let experiment: CameraExperiment
     let scrubber: VideoScrubber
     let onBack: () -> Void
     let onContinue: () -> Void
@@ -21,7 +21,7 @@ struct TrimStepView: View {
                 EmptyView()
             }
 
-            VideoStepLayout(method: method, step: .trim, instruction: instruction, isChromeHidden: isChromeHidden) {
+            VideoStepLayout(experiment: experiment, step: .trim, instruction: instruction, isChromeHidden: isChromeHidden) {
                 GlassStatusLabel {
                     Label("\(keptDuration, specifier: "%.2f") s", systemImage: "scissors")
                         .contentTransition(.numericText(value: keptDuration))
@@ -32,7 +32,7 @@ struct TrimStepView: View {
                     .hiddenWithChrome(isChromeHidden)
 
                 // The trim bar is what this step is for, so it stays when the rest is hidden.
-                TrimRangeBar(scrubber: scrubber, color: method.color)
+                TrimRangeBar(scrubber: scrubber, color: Method.camera.color)
 
                 GlassIconButton(systemImage: "arrow.forward", label: "Continue", style: .prominent, isDisabled: scrubber.frames == nil, perform: onContinue)
                     .hiddenWithChrome(isChromeHidden)
@@ -46,14 +46,14 @@ struct TrimStepView: View {
 
     /// What to keep: the part from the start of the motion to its end.
     private var instruction: LocalizedStringKey {
-        method == .projectile ? "Drag the two handles so only the flight is kept, from the launch to the landing." : "Drag the two handles so only the run is kept, from the release to the end of the track."
+        experiment == .projectile ? "Drag the two handles so only the flight is kept, from the launch to the landing." : "Drag the two handles so only the run is kept, from the release to the end of the track."
     }
 }
 
 /// The whole clip as a bar with a handle at each end of the part being kept. Moving a handle shows its frame.
 private struct TrimRangeBar: View {
     let scrubber: VideoScrubber
-    /// The colour of the kept range, the method's own.
+    /// The colour of the kept range.
     let color: Color
 
     private static let coordinateSpace: NamedCoordinateSpace = .named("TrimRangeBar")

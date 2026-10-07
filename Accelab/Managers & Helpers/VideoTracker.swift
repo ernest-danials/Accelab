@@ -10,17 +10,21 @@ import Vision
 
 /// Follows an object through a clip with Vision's object tracker, starting from a box drawn around it.
 nonisolated enum VideoTracker {
-    /// Below this, Vision has most likely lost the object, so tracking stops.
+    /// Below this, Vision has most likely lost the object, so tracking stops and says so.
     static let lostConfidence: Double = 0.3
     /// Below this, a point is worth a second look.
     static let uncertainConfidence: Double = 0.5
 
     enum TrackingError: Error {
         case noVideoTrack, unreadable
+        /// Vision stopped being able to follow the object before the last frame.
+        case lost
     }
 
-    /// Yields the centre of the tracked box for `startFrame` and every frame after it up to `endFrame`, until
-    /// the object is lost or the consuming task is cancelled.
+    /// Yields the centre of the tracked box for `startFrame` and every frame after it up to `endFrame`. The
+    /// stream ends quietly at `endFrame` or when the consuming task is cancelled, and throws
+    /// `TrackingError.lost` if the object is lost first, so that stopping early is never mistaken for
+    /// having finished.
     ///
     /// - Parameter box: The object on `startFrame`, in pixels of the frame as it is shown.
     static func track(url: URL, frames: VideoFrameIndex, startFrame: Int, endFrame: Int, box: CGRect) -> AsyncThrowingStream<TrackedPoint, Error> {
@@ -75,10 +79,10 @@ nonisolated enum VideoTracker {
                 yield(TrackedPoint(frameIndex: frameIndex, position: CGPoint(x: box.midX, y: box.midY), isManual: false, confidence: 1))
             } else {
                 try handler.perform([request], on: pixelBuffer, orientation: orientation)
-                guard let observation = request.results?.first as? VNDetectedObjectObservation else { break }
+                guard let observation = request.results?.first as? VNDetectedObjectObservation else { throw TrackingError.lost }
 
                 let confidence = Double(observation.confidence)
-                guard confidence >= lostConfidence else { break }
+                guard confidence >= lostConfidence else { throw TrackingError.lost }
 
                 yield(TrackedPoint(frameIndex: frameIndex, position: displayPoint(forCenterOf: observation.boundingBox, displaySize: displaySize), isManual: false, confidence: confidence))
                 request.inputObservation = observation

@@ -13,6 +13,9 @@ final class SavedRun {
     /// `nil` until the user names the run.
     var name: String?
     var methodRawValue: String
+    /// What a camera run filmed. `nil` for a sensor run, and for the camera runs saved before there was a
+    /// choice. Optional, like `heights`, so that those runs still open.
+    var experimentRawValue: String?
     /// `nil` when the angle steps were skipped, and for a projectile run, which has none.
     var desiredAngle: Double?
     var capturedAngle: Double?
@@ -31,10 +34,11 @@ final class SavedRun {
     /// the exported file lives in the temporary directory and goes when the run is reset.
     @Attribute(.externalStorage) var photo: Data?
 
-    init(method: Method, date: Date = .now, desiredAngle: Double?, capturedAngle: Double?, data: RunData) {
+    init(method: Method, experiment: CameraExperiment? = nil, date: Date = .now, desiredAngle: Double?, capturedAngle: Double?, data: RunData) {
         self.date = date
         self.name = nil
         self.methodRawValue = method.rawValue
+        self.experimentRawValue = experiment?.rawValue
         self.desiredAngle = desiredAngle
         self.capturedAngle = capturedAngle
         self.times = []
@@ -51,9 +55,24 @@ final class SavedRun {
         Method(rawValue: methodRawValue) ?? .camera
     }
 
-    /// The name the user gave the run, or one made from its method.
+    /// `true` for a projectile run, whose samples are x and y rather than distance along a track.
+    var isProjectile: Bool {
+        experimentRawValue == CameraExperiment.projectile.rawValue
+    }
+
+    /// The name the user gave the run, or the one it has until then.
     var title: String {
-        name ?? "\(method.rawValue) Run"
+        name ?? defaultTitle
+    }
+
+    /// A name made from the run's method, or from "Projectile" for a projectile run.
+    var defaultTitle: String {
+        "\(isProjectile ? CameraExperiment.projectile.rawValue : method.rawValue) Run"
+    }
+
+    /// The symbol a list shows the run with.
+    var imageName: String {
+        isProjectile ? CameraExperiment.projectile.imageName : method.imageName
     }
 
     /// Rebuilds the samples. Each call gives them new ids, so keep the result rather than calling this from a view's body.

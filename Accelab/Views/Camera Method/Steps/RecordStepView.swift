@@ -7,7 +7,7 @@ import PhotosUI
 import SwiftUI
 
 struct RecordStepView: View {
-    let method: Method
+    let experiment: CameraExperiment
     let captureManager: CameraCaptureManager
     let onBack: () -> Void
     let onRecord: () -> Void
@@ -29,7 +29,7 @@ struct RecordStepView: View {
                     withAnimation(.smooth) { self.isChromeHidden.toggle() }
                 }
 
-            VideoStepLayout(method: method, step: .record, instruction: isRecording ? recordingInstruction : "Press the red button to start recording, or choose a video you already filmed.", isChromeHidden: isChromeHidden) {
+            VideoStepLayout(experiment: experiment, step: .record, instruction: isRecording ? recordingInstruction : "Press the red button to start recording, or choose a video you already filmed.", isChromeHidden: isChromeHidden) {
                 VStack(alignment: .trailing, spacing: 8) {
                     if isImporting {
                         GlassStatusLabel {
@@ -112,7 +112,7 @@ struct RecordStepView: View {
 
     /// What to do while the camera is rolling: what is released, and where the clip ends.
     private var recordingInstruction: LocalizedStringKey {
-        method == .projectile ? "Launch the ball, then stop once it lands." : "Release the cart, then stop once it reaches the end of the track."
+        experiment == .projectile ? "Launch the ball, then stop once it lands." : "Release the cart, then stop once it reaches the end of the track."
     }
 
     private var isCameraRunning: Bool {

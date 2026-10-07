@@ -6,7 +6,7 @@
 import SwiftUI
 
 struct SetupStepView: View {
-    let method: Method
+    let experiment: CameraExperiment
     let onBack: () -> Void
     let onContinue: () -> Void
 
@@ -40,28 +40,28 @@ struct SetupStepView: View {
     ]
 
     private var tips: [Tip] {
-        method == .projectile ? Self.projectileTips : Self.cameraTips
+        experiment == .projectile ? Self.projectileTips : Self.cameraTips
     }
 
     private static let tipsPerRow = 3
-    /// How far a tip's text may shrink to fit its card.
+    /// How far a tip's text may shrink to fit its place.
     private static let minimumTextScale: CGFloat = 0.6
 
     var body: some View {
         // Rows rather than fixed positions. The tips share the height between the title and the buttons
-        // equally, and their text shrinks to fit its card, so nothing is cut off on a smaller screen.
+        // equally, and their text shrinks to fit its place, so nothing is cut off on a smaller screen.
         VStack(alignment: .leading, spacing: 0) {
-            StepTitleView(title: CameraMethodStep.setup.title(for: method), subtitle: CameraMethodStep.setup.subtitle(for: method), description: CameraMethodStep.setup.description(for: method), isProminent: false, isInline: true)
+            StepTitleView(title: CameraMethodStep.setup.title(for: experiment), subtitle: CameraMethodStep.setup.subtitle(for: experiment), description: CameraMethodStep.setup.description(for: experiment), isProminent: false, isInline: true)
                 .padding([.top, .horizontal], 30)
                 .padding(.bottom, 10)
 
-            GlassEffectContainer {
-                VStack(spacing: 10) {
-                    ForEach(Array(stride(from: 0, to: tips.count, by: Self.tipsPerRow)), id: \.self) { start in
-                        HStack(spacing: 10) {
-                            ForEach(tips[start..<min(start + Self.tipsPerRow, tips.count)]) { tip in
-                                tipCard(for: tip)
-                            }
+            // Plain text on the page, not glass cards: glass is what the app's buttons are made of, and
+            // the tips were being taken for something to press.
+            VStack(spacing: 10) {
+                ForEach(Array(stride(from: 0, to: tips.count, by: Self.tipsPerRow)), id: \.self) { start in
+                    HStack(spacing: 24) {
+                        ForEach(tips[start..<min(start + Self.tipsPerRow, tips.count)]) { tip in
+                            tipView(for: tip)
                         }
                     }
                 }
@@ -79,15 +79,15 @@ struct SetupStepView: View {
             .alignView(to: .trailing)
             .padding()
         }
-        // The cards are sized for ordinary text; much larger text would have to shrink too far to fit.
+        // The tips are sized for ordinary text; much larger text would have to shrink too far to fit.
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
     }
 
-    private func tipCard(for tip: Tip) -> some View {
-        HStack(alignment: .center, spacing: 10) {
+    private func tipView(for tip: Tip) -> some View {
+        HStack(alignment: .center, spacing: 12) {
             Image(systemName: tip.systemImage)
                 .customFont(.title3, weight: .medium)
-                .foregroundStyle(method.color)
+                .foregroundStyle(Method.camera.color)
                 .frame(width: 30)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -103,7 +103,5 @@ struct SetupStepView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 18))
     }
 }

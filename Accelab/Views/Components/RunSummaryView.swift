@@ -93,7 +93,7 @@ struct RunSummaryView: View {
     /// Where the projectile was on the last tracked frame.
     private func positionColumn(for splits: [PositionSplit]) -> some View {
         VStack {
-            Image(systemName: Method.projectile.imageName)
+            Image(systemName: CameraExperiment.projectile.imageName)
                 .customFont(.title3, weight: .bold)
                 .padding(.bottom, 2)
 
