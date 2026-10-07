@@ -13,7 +13,7 @@ struct PastRunDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @State private var splits: [DistanceSplit] = []
+    @State private var data: RunData
     @State private var csvURL: URL? = nil
     @State private var desmosURL: URL? = nil
     @State private var photo: UIImage? = nil
@@ -23,9 +23,17 @@ struct PastRunDetailView: View {
     @State private var isShowingPhoto: Bool = false
     @State private var isShowingConfirmationDialogToDelete: Bool = false
 
+    init(run: SavedRun) {
+        self.run = run
+        // Empty until the samples are loaded, but already the run's own kind, so the summary doesn't
+        // open on the other kind's layout. Asked of the run rather than of its samples: a list builds
+        // this view for every row, which shouldn't load each run's arrays.
+        self._data = State(initialValue: run.isProjectile ? .position([]) : .distance([]))
+    }
+
     var body: some View {
         ZStack {
-            RunSummaryView(desiredAngle: run.desiredAngle, capturedAngle: run.capturedAngle, splits: splits)
+            RunSummaryView(desiredAngle: run.desiredAngle, capturedAngle: run.capturedAngle, data: data)
                 .padding(.horizontal)
                 .padding(.bottom, 40)
 
@@ -41,13 +49,14 @@ struct PastRunDetailView: View {
 
                     Spacer()
 
-                    RunExportControls(splits: splits, csvURL: csvURL, desmosURL: desmosURL, offersMedia: run.method == .camera, photoURL: photoURL, onRetryExport: exportFiles)
+                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: run.method == .camera, photoURL: photoURL, onRetryExport: exportFiles)
                 }
                 .alignViewVertically(to: .bottom)
                 .padding()
             }
         }
         .navigationTitle(run.title)
+        .navigationSubtitle(run.caption)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if photo != nil {
@@ -67,7 +76,7 @@ struct PastRunDetailView: View {
             }
         }
         .task {
-            self.splits = run.makeSplits()
+            self.data = run.makeData()
             self.photo = run.photo.flatMap(UIImage.init(data:))
             exportFiles()
         }
@@ -75,8 +84,8 @@ struct PastRunDetailView: View {
 
     /// Writes the run's files where they can be shared from. They are removed when the past runs are closed.
     private func exportFiles() {
-        self.csvURL = CSVExporter.writeTempFile(for: splits)
-        self.desmosURL = CSVExporter.writeDesmosTempFile(for: splits)
+        self.csvURL = CSVExporter.writeTempFile(for: data)
+        self.desmosURL = CSVExporter.writeDesmosTempFile(for: data)
 
         RunMediaExporter.removeTempFiles()
         self.photoURL = run.photo.flatMap(RunMediaExporter.writePhotoFile(from:))
@@ -88,7 +97,7 @@ struct PastRunDetailView: View {
     }
 }
 
-/// The photo of a camera run's tracked points, as large as the screen allows.
+/// The photo of the tracked points of a run filmed with the camera, as large as the screen allows.
 private struct RunPhotoView: View {
     let photo: UIImage
     /// The photo as a file to share. `nil` if writing it failed.

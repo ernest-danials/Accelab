@@ -7,7 +7,11 @@ import PhotosUI
 import SwiftUI
 
 struct RecordStepView: View {
+    let experiment: CameraExperiment
     let captureManager: CameraCaptureManager
+    /// How far from level the phone may be before the readout calls it tilted. `nil` when being level
+    /// doesn't matter (a cart on a track), which leaves the readout out.
+    let levelMargin: Double?
     let onBack: () -> Void
     let onRecord: () -> Void
     let onStop: () -> Void
@@ -28,7 +32,7 @@ struct RecordStepView: View {
                     withAnimation(.smooth) { self.isChromeHidden.toggle() }
                 }
 
-            VideoStepLayout(step: .record, instruction: isRecording ? "Release the cart, then stop once it reaches the end of the track." : "Press the red button to start recording, or choose a video you already filmed.", isChromeHidden: isChromeHidden) {
+            VideoStepLayout(experiment: experiment, step: .record, instruction: isRecording ? recordingInstruction : "Press the red button to start recording, or choose a video you already filmed.", isChromeHidden: isChromeHidden) {
                 VStack(alignment: .trailing, spacing: 8) {
                     if isImporting {
                         GlassStatusLabel {
@@ -39,13 +43,21 @@ struct RecordStepView: View {
                             }
                         }
                     } else {
-                        PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
-                            GlassIconLabel(systemImage: "photo.on.rectangle")
+                        HStack(spacing: 8) {
+                            // The phone was levelled a step ago, and can shift when it is let go of or the
+                            // record button is pressed. Only while the camera is the one filming.
+                            if let levelMargin, isCameraRunning {
+                                LevelStatusLabel(margin: levelMargin)
+                            }
+
+                            PhotosPicker(selection: $selectedItem, matching: .videos, preferredItemEncoding: .current) {
+                                GlassIconLabel(systemImage: "photo.on.rectangle")
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(isRecording)
+                            .opacity(isRecording ? 0.5 : 1)
+                            .accessibilityLabel("Choose from Photos")
                         }
-                        .buttonStyle(.plain)
-                        .disabled(isRecording)
-                        .opacity(isRecording ? 0.5 : 1)
-                        .accessibilityLabel("Choose from Photos")
                     }
 
                     if didFailToImport {
@@ -107,6 +119,11 @@ struct RecordStepView: View {
 
     private var isRecording: Bool {
         captureManager.state == .recording || captureManager.state == .finishing
+    }
+
+    /// What to do while the camera is rolling: what is released, and where the clip ends.
+    private var recordingInstruction: LocalizedStringKey {
+        experiment == .projectile ? "Launch the object, then stop once it lands." : "Release the cart, then stop once it reaches the end of the track."
     }
 
     private var isCameraRunning: Bool {
@@ -177,5 +194,40 @@ struct RecordStepView: View {
         }
         .foregroundStyle(.white)
         .padding()
+    }
+}
+
+/// Whether the phone is still level, and by how much it isn't. A view of its own so that the angle, which
+/// changes many times a second, redraws only this label.
+private struct LevelStatusLabel: View {
+    @Environment(AngleManager.self) private var angleManager: AngleManager
+
+    let margin: Double
+
+    var body: some View {
+        // Lying flat, the tilt of the long edge can't be read.
+        if !angleManager.isFlat {
+            let isLevel = angleManager.isCurrentAngleWithinMargin(targetAngle: 0, margin: margin)
+
+            GlassStatusLabel {
+                // One icon and one colour that change, rather than two labels swapped, so going from
+                // level to tilted reads as the same label changing its mind.
+                HStack(spacing: 6) {
+                    Image(systemName: isLevel ? "checkmark" : "exclamationmark.triangle.fill")
+                        .contentTransition(.symbolEffect(.replace))
+
+                    if isLevel {
+                        Text("Level")
+                            .transition(.blurReplace)
+                    } else {
+                        Text("Tilted \(angleManager.currentAngle, specifier: "%.2f")°")
+                            .contentTransition(.numericText(value: angleManager.currentAngle))
+                            .transition(.blurReplace)
+                    }
+                }
+                .foregroundStyle(isLevel ? Color.primary : Color.orange)
+            }
+            .animation(.smooth, value: isLevel)
+        }
     }
 }

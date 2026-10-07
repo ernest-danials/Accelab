@@ -8,11 +8,11 @@ import SwiftUI
 /// The Table, Desmos and Export controls of a run, for a run just finished and for a saved one.
 /// Place it in a row inside a `GlassEffectContainer`.
 struct RunExportControls: View {
-    let splits: [DistanceSplit]
+    let data: RunData
     let csvURL: URL?
     /// The data as a text file Desmos can import.
     let desmosURL: URL?
-    /// `true` for the camera method, whose export is a menu of the data, the video and the photo.
+    /// `true` for the methods that film the run, whose export is a menu of the data, the video and the photo.
     var offersMedia: Bool = false
     /// The recorded clip, when the run was filmed in the app. `nil` for the sensor method, imported clips and saved runs.
     var videoURL: URL? = nil
@@ -78,7 +78,7 @@ struct RunExportControls: View {
             }
         }
         .fullScreenCover(isPresented: $isShowingDataTable) {
-            DataTableView(splits: splits)
+            DataTableView(data: data)
         }
         .task(id: didCopyData) {
             // Shows "Copied" for a moment, then offers the copy again.
@@ -89,7 +89,7 @@ struct RunExportControls: View {
 
     /// Puts the data on the clipboard as rows Desmos turns into a table when pasted.
     private func copyDataForDesmos() {
-        UIPasteboard.general.string = CSVExporter.makeDesmosText(from: splits)
+        UIPasteboard.general.string = CSVExporter.makeDesmosText(from: data)
         Haptics.success()
         withAnimation { self.didCopyData = true }
     }

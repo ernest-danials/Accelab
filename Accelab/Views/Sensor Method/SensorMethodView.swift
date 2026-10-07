@@ -60,7 +60,7 @@ struct SensorMethodView: View {
             case .measuring:
                 MeasuringStepView(splits: measuringManager.splits, onDiscard: discardMeasuring, onDone: finishMeasuring)
             case .completed:
-                CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: measuringManager.splits, csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
+                CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, data: .distance(measuringManager.splits), csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
         }
         // Check the step first so the body only observes `currentAngle` while determining the angle.
@@ -130,9 +130,9 @@ struct SensorMethodView: View {
         guard !splits.isEmpty else { return }
 
         if let savedRun {
-            savedRun.update(splits: splits)
+            savedRun.update(data: .distance(splits))
         } else {
-            let run = SavedRun(method: .sensor, desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, splits: splits)
+            let run = SavedRun(method: .sensor, desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, data: .distance(splits))
             modelContext.insert(run)
             self.savedRun = run
         }
@@ -157,8 +157,8 @@ struct SensorMethodView: View {
     }
 
     private func exportCSV() {
-        self.csvURL = CSVExporter.writeTempFile(for: measuringManager.splits)
-        self.desmosURL = CSVExporter.writeDesmosTempFile(for: measuringManager.splits)
+        self.csvURL = CSVExporter.writeTempFile(for: .distance(measuringManager.splits))
+        self.desmosURL = CSVExporter.writeDesmosTempFile(for: .distance(measuringManager.splits))
     }
 
     /// The angle can't be read while the phone is lying flat.

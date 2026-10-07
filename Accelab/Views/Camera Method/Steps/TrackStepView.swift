@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct TrackStepView: View {
+    let experiment: CameraExperiment
     let scrubber: VideoScrubber
     @Binding var points: [TrackedPoint]
     let onBack: () -> Void
@@ -17,16 +18,30 @@ struct TrackStepView: View {
     @State private var box: CGRect? = nil
     @State private var trackingTask: Task<Void, Never>? = nil
     @State private var didFailToTrack: Bool = false
+    /// The first frame automatic tracking didn't reach, when it lost the cart partway through.
+    @State private var lostFrame: Int? = nil
 
-    /// How far the clip moves on after each manual mark.
-    private static let markInterval: TimeInterval = 0.1
     /// A distance–time curve needs at least this many samples to be worth exporting.
     private static let minimumPointCount = 3
+    /// Losing the cart with fewer frames than this left to go counts as finishing: a cart at the end of
+    /// its track or a projectile that has just landed often goes on the last frame or two.
+    private static let lostFramesWorthMentioning = 3
     /// A smaller box gives the tracker too little to hold on to.
     static let minimumBoxSide: CGFloat = 20
     /// Trail markers closer together than this on screen are skipped, which keeps the trail readable
     /// and the number of glass shapes small.
     private static let minimumTrailMarkerSpacing: CGFloat = 14
+
+    /// How far the clip moves on after each manual mark.
+    private var markInterval: TimeInterval {
+        switch experiment {
+        case .airTrack:
+            return 0.1
+        case .projectile:
+            // A flight lasts well under a second, so a mark every tenth of a second would leave too few points.
+            return 1.0 / 30
+        }
+    }
 
     private enum Mode {
         /// Nothing marked yet: the two ways of following the cart are offered.
@@ -40,9 +55,12 @@ struct TrackStepView: View {
         case viewing
         /// Stepping through the points automatic tracking was unsure of.
         case reviewing
+        /// Automatic tracking lost the cart before the end of the video: the ways of carrying on are offered.
+        case lost
     }
 
-    init(scrubber: VideoScrubber, points: Binding<[TrackedPoint]>, onBack: @escaping () -> Void, onFinish: @escaping () -> Void) {
+    init(experiment: CameraExperiment, scrubber: VideoScrubber, points: Binding<[TrackedPoint]>, onBack: @escaping () -> Void, onFinish: @escaping () -> Void) {
+        self.experiment = experiment
         self.scrubber = scrubber
         self._points = points
         self.onBack = onBack
@@ -54,10 +72,17 @@ struct TrackStepView: View {
     var body: some View {
         // Read here rather than inside the overlay, so the highlight follows the scrubber.
         let currentFrameIndex = scrubber.currentFrameIndex
-        let isChromeHidden = isChromeHidden && (mode == .choosing || mode == .viewing || mode == .drawingBox)
+        let isChromeHidden = isChromeHidden && (mode == .choosing || mode == .viewing || mode == .drawingBox || mode == .lost)
 
         ZStack {
             VideoFrameViewer(scrubber: scrubber, onTap: handleTap) { mapping in
+                // Beneath the trail and the reticle, so they stay on top of it.
+                if experiment == .projectile, let origin = points.min(by: { $0.frameIndex < $1.frameIndex }) {
+                    ProjectileAxes(xDirection: CGFloat(TrackGeometry.horizontalDirection(of: points)))
+                        .position(mapping.viewPoint(for: origin.position))
+                        .allowsHitTesting(false)
+                }
+
                 // No blending distance, so neighbouring markers stay separate beads instead of merging.
                 GlassEffectContainer(spacing: 0) {
                     ZStack {
@@ -87,12 +112,20 @@ struct TrackStepView: View {
                     .transition(.blurReplace)
             }
 
-            VideoStepLayout(step: .track, instruction: instruction, isChromeHidden: isChromeHidden) {
+            if mode == .lost {
+                // Stopping early must not pass for having finished, so this stays when the controls are hidden too.
+                lostChooser
+                    .transition(.blurReplace)
+            }
+
+            VideoStepLayout(experiment: experiment, step: .track, instruction: instruction, isChromeHidden: isChromeHidden) {
                 GlassEffectContainer {
                     HStack(spacing: 8) {
                         switch mode {
                         case .choosing:
                             EmptyView()
+                        case .lost:
+                            lostControls
                         case .drawingBox:
                             boxControls
                         case .tracking:
@@ -132,21 +165,27 @@ struct TrackStepView: View {
 
     /// What to do right now, shown in the title card.
     private var instruction: LocalizedStringKey {
+        let subject = experiment.subject
+        let isProjectile = experiment == .projectile
+
         switch mode {
         case .choosing:
-            return "Go to the frame where the cart is released, then choose how to follow it."
+            return "Go to the frame where the \(subject) is \(isProjectile ? "launched" : "released"), then choose how to follow it."
         case .drawingBox:
-            if didFailToTrack { return "Couldn't follow the cart. Fit the box more tightly and press Start, or mark it by hand instead." }
-            return box == nil ? "Drag a box around the cart on this frame." : "Drag the corners until the box fits the cart tightly, then press Start."
+            if didFailToTrack { return "Couldn't follow the \(subject). Fit the box more tightly and press Start, or mark it by hand instead." }
+            return box == nil ? "Drag a box around the \(subject) on this frame." : "Drag the corners until the box fits the \(subject) tightly, then press Start."
         case .tracking:
-            return "Following the cart through the video…"
+            return "Following the \(subject) through the video…"
+        case .lost:
+            return "Accelab lost the \(subject) at this frame, before the end of the video. Track again from here, or mark the rest by hand."
         case .marking:
-            if points.isEmpty { return "Tap the cart. Pick a spot you can find again on every frame." }
-            return points.count < Self.minimumPointCount ? "Tap the same spot again. The video moves on after each tap." : "Keep tapping the same spot until the run is covered, then press ✓."
+            if points.isEmpty { return isProjectile ? "Tap the centre of the object. This first point becomes the origin." : "Tap the \(subject). Pick a spot you can find again on every frame." }
+            if points.count < Self.minimumPointCount { return isProjectile ? "Tap the centre of the object again. The video moves on after each tap." : "Tap the same spot again. The video moves on after each tap." }
+            return isProjectile ? "Keep tapping the object until the flight is covered, then press ✓." : "Keep tapping the same spot until the run is covered, then press ✓."
         case .viewing:
-            return uncertainPointCount > 0 ? "^[\(uncertainPointCount) point](inflect: true) in orange may be off. Press Check to go through them." : "Scrub through to check the yellow trail follows the cart, then press ✓."
+            return uncertainPointCount > 0 ? "^[\(uncertainPointCount) point](inflect: true) in orange may be off. Press Check to go through them." : "Scrub through to check the yellow trail follows the \(subject), then press ✓."
         case .reviewing:
-            return "Is the ring on the cart? Tap where the cart really is, or press Keep if it's right."
+            return "Is the ring on the \(subject)? Tap where the \(subject) really is, or press Keep if it's right."
         }
     }
 
@@ -156,11 +195,11 @@ struct TrackStepView: View {
     private var methodChooser: some View {
         GlassEffectContainer {
             HStack(spacing: 12) {
-                methodCard(systemImage: "scope", title: "Track Automatically", detail: "Draw a box around the cart and Accelab follows it.", isRecommended: true) {
+                methodCard(systemImage: "scope", title: "Track Automatically", detail: "Draw a box around the \(experiment.subject) and Accelab follows it.", isRecommended: true) {
                     withAnimation { self.mode = .drawingBox }
                 }
 
-                methodCard(systemImage: "hand.tap", title: "Mark by Hand", detail: "Tap the cart yourself, frame by frame.", isRecommended: false) {
+                methodCard(systemImage: "hand.tap", title: "Mark by Hand", detail: "Tap the \(experiment.subject) yourself, frame by frame.", isRecommended: false) {
                     withAnimation { self.mode = .marking }
                 }
             }
@@ -199,8 +238,72 @@ struct TrackStepView: View {
         .buttonStyle(.plain)
     }
 
+    /// What tracking managed before it lost the cart, and the way out for when that is all there was to
+    /// follow, such as a cart that left the picture.
+    @ViewBuilder
+    private var lostControls: some View {
+        GlassStatusLabel {
+            Label("^[\(points.count) point](inflect: true)", systemImage: "scope")
+        }
+
+        GlassIconButton(systemImage: "xmark", title: "Dismiss", label: "Dismiss and Keep These Points") {
+            self.lostFrame = nil
+            withAnimation { self.mode = .viewing }
+        }
+    }
+
+    /// Says that tracking stopped early, and offers the two ways of covering the rest of the video.
+    private var lostChooser: some View {
+        VStack(spacing: 10) {
+            GlassStatusLabel {
+                Label("Lost the \(experiment.subject) at \(lostTime, specifier: "%.2f") s", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+            }
+
+            GlassEffectContainer {
+                HStack(spacing: 12) {
+                    methodCard(systemImage: "scope", title: "Track Again from Here", detail: "Draw a new box around the \(experiment.subject) on this frame.", isRecommended: true) {
+                        returnToLostFrame()
+                        self.didFailToTrack = false
+                        withAnimation { self.mode = .drawingBox }
+                    }
+
+                    methodCard(systemImage: "hand.tap", title: "Mark the Rest by Hand", detail: "Tap the \(experiment.subject) yourself from this frame on.", isRecommended: false) {
+                        returnToLostFrame()
+                        withAnimation { self.mode = .marking }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
+        .environment(\.colorScheme, .dark)
+    }
+
+    /// Carries on from the frame the cart was lost on, wherever the clip has been scrubbed to since:
+    /// "from here" means that frame, and starting earlier would throw away good points.
+    private func returnToLostFrame() {
+        if let lostFrame { scrubber.seek(toFrame: lostFrame) }
+        self.lostFrame = nil
+    }
+
+    /// When tracking lost the cart, in seconds from the start of the kept range, as the scrub bar counts.
+    private var lostTime: TimeInterval {
+        guard let lostFrame else { return 0 }
+        return scrubber.seconds(at: lostFrame) - scrubber.seconds(at: scrubber.trimRange.lowerBound)
+    }
+
     @ViewBuilder
     private var boxControls: some View {
+        if didFailToTrack {
+            // The instruction says what went wrong; this makes sure it is looked at.
+            GlassStatusLabel {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+            }
+            .accessibilityLabel("Couldn't follow the \(experiment.subject)")
+        }
+
         // Titled, because a bare ✕ beside the box read as "delete the box" rather than "leave this mode".
         GlassIconButton(systemImage: "xmark", title: "Cancel", label: "Cancel Automatic Tracking") {
             self.box = nil
@@ -315,12 +418,12 @@ struct TrackStepView: View {
         let isOnVideo = scrubber.frames.map { CGRect(origin: .zero, size: $0.displaySize).contains(position) } ?? false
 
         switch mode {
-        case .choosing, .viewing, .drawingBox:
+        case .choosing, .viewing, .drawingBox, .lost:
             toggleChrome()
         case .marking:
             if isOnVideo {
                 mark(at: position)
-                scrubber.step(bySeconds: Self.markInterval)
+                scrubber.step(bySeconds: markInterval)
             }
         case .reviewing:
             if isOnVideo {
@@ -359,6 +462,7 @@ struct TrackStepView: View {
 
         self.trackingTask = Task {
             var trackedCount = 0
+            var didStopEarly = false
 
             do {
                 for try await point in VideoTracker.track(url: scrubber.url, frames: frames, startFrame: startFrame, endFrame: scrubber.trimRange.upperBound, box: box) {
@@ -371,7 +475,9 @@ struct TrackStepView: View {
                     }
                 }
             } catch {
-                // Whatever was tracked before the failure is kept.
+                // Whatever was tracked before the failure is kept. Lost or unreadable, the rest of the
+                // video wasn't covered.
+                didStopEarly = true
             }
 
             // The first point is the drawn box itself, so one point means nothing was followed.
@@ -386,6 +492,18 @@ struct TrackStepView: View {
             }
 
             self.box = nil
+
+            // Stopped before the end without being asked to: said out loud, on the frame it happened, with
+            // the ways of carrying on. Otherwise the trail just ends and looks finished.
+            if didStopEarly && !Task.isCancelled, let last = points.last, scrubber.trimRange.upperBound - last.frameIndex >= Self.lostFramesWorthMentioning {
+                let frame = min(last.frameIndex + 1, scrubber.trimRange.upperBound)
+                self.lostFrame = frame
+                scrubber.seek(toFrame: frame)
+                Haptics.error()
+                withAnimation { self.mode = .lost }
+                return
+            }
+
             if let last = points.last {
                 scrubber.seek(toFrame: last.frameIndex)
             }
@@ -461,6 +579,86 @@ struct TrackStepView: View {
 
     private var uncertainPointCount: Int {
         points.count(where: isUncertain)
+    }
+}
+
+/// The origin and the two axes a projectile's x and y are measured along, drawn at a constant size around
+/// the point it is placed on. Not glass, because the origin is a spot to be read exactly.
+private struct ProjectileAxes: View {
+    /// 1 when x counts up towards the right of the picture, -1 towards the left.
+    let xDirection: CGFloat
+
+    /// How long each axis is on screen, whatever the zoom.
+    private static let length: CGFloat = 56
+    /// How far past an arrow's tip the middle of its label sits.
+    private static let labelGap: CGFloat = 12
+    private static let labelSize: CGFloat = 16
+
+    var body: some View {
+        let reach = (Self.length + Self.labelGap) * 2 + 8
+        // The picture's y runs downwards, so height counts up the screen towards negative y.
+        let xAxis = CGVector(dx: xDirection, dy: 0)
+        let yAxis = CGVector(dx: 0, dy: -1)
+
+        ZStack {
+            arrow(direction: xAxis)
+            arrow(direction: yAxis)
+            label("x", direction: xAxis)
+            label("y", direction: yAxis)
+        }
+        .frame(width: reach, height: reach)
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(xDirection < 0 ? "Origin and axes: x counts up towards the left, y upwards" : "Origin and axes: x counts up towards the right, y upwards")
+    }
+
+    /// A thin white line with a dark outline beneath it, so it reads over light and dark footage alike.
+    private func arrow(direction: CGVector) -> some View {
+        ZStack {
+            AxisArrow(direction: direction, length: Self.length)
+                .stroke(.black.opacity(0.5), style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round))
+
+            AxisArrow(direction: direction, length: Self.length)
+                .stroke(.white, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+        }
+    }
+
+    /// The axis's name on a dark disc: white text alone, even with a shadow, is lost over light footage.
+    private func label(_ name: String, direction: CGVector) -> some View {
+        Text(verbatim: name)
+            .customFont(.caption2, weight: .bold)
+            .foregroundStyle(.white)
+            .frame(width: Self.labelSize, height: Self.labelSize)
+            .background(.black.opacity(0.55), in: .circle)
+            .offset(x: direction.dx * (Self.length + Self.labelGap), y: direction.dy * (Self.length + Self.labelGap))
+    }
+}
+
+/// A line from the middle of its rect, `length` long in `direction`, ending in an arrowhead.
+private struct AxisArrow: Shape {
+    let direction: CGVector
+    let length: CGFloat
+
+    private static let headLength: CGFloat = 8
+    /// How far each barb of the arrowhead leans back from the line, in radians (about 29°).
+    private static let headAngle: CGFloat = 0.5
+
+    func path(in rect: CGRect) -> Path {
+        let start = CGPoint(x: rect.midX, y: rect.midY)
+        let tip = CGPoint(x: start.x + direction.dx * length, y: start.y + direction.dy * length)
+        // The way back from the tip along the line, turned to either side for the two barbs.
+        let back = atan2(-direction.dy, -direction.dx)
+
+        var path = Path()
+        path.move(to: start)
+        path.addLine(to: tip)
+
+        for turn in [-Self.headAngle, Self.headAngle] {
+            path.move(to: tip)
+            path.addLine(to: CGPoint(x: tip.x + Self.headLength * cos(back + turn), y: tip.y + Self.headLength * sin(back + turn)))
+        }
+
+        return path
     }
 }
 

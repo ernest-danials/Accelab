@@ -6,14 +6,14 @@
 import SwiftUI
 
 struct CompletedStepView: View {
-    /// `nil` when the angle steps were skipped.
+    /// `nil` when the angle steps were skipped, and for a projectile run, which has none.
     let desiredAngle: Double?
     let capturedAngle: Double?
-    let splits: [DistanceSplit]
+    let data: RunData
     let csvURL: URL?
     /// The data as a text file Desmos can import.
     let desmosURL: URL?
-    /// `true` for the camera method, whose export is a menu of the data, the video and the photo.
+    /// `true` for the methods that film the run, whose export is a menu of the data, the video and the photo.
     var offersMedia: Bool = false
     /// The recorded clip, when the run was filmed in the app. `nil` for the sensor method and imported clips.
     var videoURL: URL? = nil
@@ -28,12 +28,12 @@ struct CompletedStepView: View {
 
     var body: some View {
         ZStack {
-            RunSummaryView(desiredAngle: desiredAngle, capturedAngle: capturedAngle, splits: splits)
+            RunSummaryView(desiredAngle: desiredAngle, capturedAngle: capturedAngle, data: data)
                 .offset(y: 15)
 
             GlassEffectContainer {
                 HStack {
-                    RunExportControls(splits: splits, csvURL: csvURL, desmosURL: desmosURL, offersMedia: offersMedia, videoURL: videoURL, photoURL: photoURL, onRetryExport: onRetryExport)
+                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: offersMedia, videoURL: videoURL, photoURL: photoURL, onRetryExport: onRetryExport)
 
                     GlassIconButton(systemImage: "checkmark", label: "Done") {
                         self.isShowingConfirmationDialogToExit = true
@@ -48,7 +48,7 @@ struct CompletedStepView: View {
             }
         }
         .onAppear {
-            // Both methods end here, so this is where finishing a run is felt.
+            // Every method ends here, so this is where finishing a run is felt.
             Haptics.success()
         }
     }

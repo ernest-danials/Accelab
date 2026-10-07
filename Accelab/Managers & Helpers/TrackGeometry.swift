@@ -6,7 +6,8 @@
 import CoreGraphics
 import Foundation
 
-/// Turns the cart's positions on the clip into distance–time samples.
+/// Turns the tracked positions on the clip into samples in metres and seconds: distance along the track
+/// for a cart, x and y for a projectile.
 enum TrackGeometry {
     /// - Parameters:
     ///   - points: The cart's position on each tracked frame, in any order.
@@ -28,6 +29,37 @@ enum TrackGeometry {
         return points.map { point in
             DistanceSplit(timeElapsed: seconds(point.frameIndex) - startTime, displacement: sign * position(alongAxis: point.position) * calibration.metersPerPixel)
         }
+    }
+
+    /// Turns a projectile's positions on the clip into its x and y against time, with the first point as
+    /// the origin. Unlike a cart, a projectile follows no line to fit, so the axes are the picture's own:
+    /// x along its width and y up its height, which is true to life only if the camera was held level.
+    ///
+    /// - Parameters:
+    ///   - points: The projectile's position on each tracked frame, in any order.
+    ///   - seconds: Gives the time of a frame from its index.
+    static func makePositionSplits(from points: [TrackedPoint], calibration: CameraCalibration, seconds: (Int) -> TimeInterval) -> [PositionSplit] {
+        let points = points.sorted { $0.frameIndex < $1.frameIndex }
+        guard let first = points.first else { return [] }
+
+        let sign = horizontalDirection(of: points)
+        let startTime = seconds(first.frameIndex)
+
+        return points.map { point in
+            // Height is not given a sign from the motion: up is up wherever the projectile lands, and the
+            // picture's y runs downwards.
+            PositionSplit(timeElapsed: seconds(point.frameIndex) - startTime, x: sign * (point.position.x - first.position.x) * calibration.metersPerPixel, y: (first.position.y - point.position.y) * calibration.metersPerPixel)
+        }
+    }
+
+    /// Which way along the picture a projectile's x counts up: 1 towards the right, -1 towards the left.
+    /// Horizontal distance counts in the direction of travel, as the distance along a track does, so it
+    /// is the side the last point lies on from the first.
+    ///
+    /// - Parameter points: The projectile's position on each tracked frame, in any order.
+    static func horizontalDirection(of points: [TrackedPoint]) -> Double {
+        guard let first = points.min(by: { $0.frameIndex < $1.frameIndex }), let last = points.max(by: { $0.frameIndex < $1.frameIndex }) else { return 1 }
+        return last.position.x < first.position.x ? -1 : 1
     }
 
     /// The direction of the best-fit straight line through the points, as a unit vector.
