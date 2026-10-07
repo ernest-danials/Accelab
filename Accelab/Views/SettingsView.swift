@@ -22,7 +22,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("About") {
-                    Text("Accelab helps you run an air-track lab. Set the track to the angle you chose, then get the cart's distance–time data by filming the cart with the Camera method, or by strapping your iPhone to it with the Sensor method. Export the data as CSV or for Desmos, and find your finished runs in Past Runs.")
+                    Text("Accelab helps you run an air-track lab. Set the track to the angle you chose, then get the cart's distance–time data by filming the cart with the Camera method, or by strapping your iPhone to it with the Sensor method. The Projectile method films a ball in flight and gives you its x and y position against time. Export the data as CSV or for Desmos, and find your finished runs in Past Runs.")
                 }
                 
                 Section {
@@ -33,7 +33,7 @@ struct SettingsView: View {
                         }
                     }
                 } footer: {
-                    Text("When you set the track's angle, in either method, the measured angle must be within this margin of the target angle.")
+                    Text("When you set the track's angle, in the Camera or Sensor method, the measured angle must be within this margin of the target angle.")
                 }
                 
                 Section {

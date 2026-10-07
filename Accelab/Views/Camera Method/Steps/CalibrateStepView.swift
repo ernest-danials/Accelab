@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct CalibrateStepView: View {
+    let method: Method
     let scrubber: VideoScrubber
     /// The calibration to start from when the user comes back to this step.
     let calibration: CameraCalibration?
@@ -54,7 +55,7 @@ struct CalibrateStepView: View {
                 }
             }
 
-            VideoStepLayout(step: .calibrate, instruction: "Drag each yellow marker onto one end of a length you know, then enter that length.", isChromeHidden: isChromeHidden) {
+            VideoStepLayout(method: method, step: .calibrate, instruction: "Drag each yellow marker onto one end of a length you know, then enter that length.", isChromeHidden: isChromeHidden) {
                 VStack(alignment: .trailing, spacing: 8) {
                     lengthField
 

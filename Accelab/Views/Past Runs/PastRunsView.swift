@@ -77,7 +77,10 @@ struct PastRunsView: View {
                     .monospacedDigit()
 
                 Group {
-                    if let desiredAngle = run.desiredAngle {
+                    if !run.method.measuresAngle {
+                        // So the number above isn't taken for the length of the path.
+                        Text("Horizontal distance")
+                    } else if let desiredAngle = run.desiredAngle {
                         Text("\(desiredAngle, specifier: "%.2f")°")
                     } else {
                         Text("No angle")

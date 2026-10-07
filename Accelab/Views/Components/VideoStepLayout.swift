@@ -13,6 +13,8 @@ import SwiftUI
 /// decides what in its bottom row is essential enough to stay. Hidden controls fade in place rather than
 /// leaving the layout, so nothing slides when they return.
 struct VideoStepLayout<TopTrailing: View, Bottom: View>: View {
+    /// The method the step belongs to, which decides the step's number and wording.
+    let method: Method
     let step: CameraMethodStep
     /// What to do right now, shown under the step's title. Defaults to the step's description.
     var instruction: LocalizedStringKey? = nil
@@ -50,10 +52,10 @@ struct VideoStepLayout<TopTrailing: View, Bottom: View>: View {
 
     private var titleCard: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("\(step.subtitle) · \(step.title)")
+            Text("\(step.subtitle(for: method)) · \(step.title(for: method))")
                 .customFont(.subheadline, weight: .bold)
 
-            Text(instruction ?? LocalizedStringKey(step.description))
+            Text(instruction ?? LocalizedStringKey(step.description(for: method)))
                 .customFont(.caption, weight: .medium)
                 .foregroundStyle(.primary.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)

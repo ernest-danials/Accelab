@@ -13,32 +13,38 @@ final class SavedRun {
     /// `nil` until the user names the run.
     var name: String?
     var methodRawValue: String
-    /// `nil` when the angle steps were skipped.
+    /// `nil` when the angle steps were skipped, and for a projectile run, which has none.
     var desiredAngle: Double?
     var capturedAngle: Double?
-    // The samples as two plain arrays, so `DistanceSplit` stays free of persistence.
+    // The samples as plain arrays, so `DistanceSplit` and `PositionSplit` stay free of persistence.
     var times: [Double]
+    /// The distance along the track, or a projectile's x.
     var displacements: [Double]
+    /// A projectile's y, one for each of `displacements`. `nil` for a run along a track. Optional, and
+    /// added without changing the properties above, so runs saved before projectile runs existed still open.
+    var heights: [Double]?
     // Copied from the last sample, so a list row doesn't have to load the arrays.
     var duration: Double
     var distance: Double
     var splitCount: Int
-    /// The JPEG of the tracked points, for a camera run. The bytes rather than a file URL: the exported
-    /// file lives in the temporary directory and goes when the run is reset.
+    /// The JPEG of the tracked points, for a run filmed with the camera. The bytes rather than a file URL:
+    /// the exported file lives in the temporary directory and goes when the run is reset.
     @Attribute(.externalStorage) var photo: Data?
 
-    init(method: Method, date: Date = .now, desiredAngle: Double?, capturedAngle: Double?, splits: [DistanceSplit]) {
+    init(method: Method, date: Date = .now, desiredAngle: Double?, capturedAngle: Double?, data: RunData) {
         self.date = date
         self.name = nil
         self.methodRawValue = method.rawValue
         self.desiredAngle = desiredAngle
         self.capturedAngle = capturedAngle
-        self.times = splits.map(\.timeElapsed)
-        self.displacements = splits.map(\.displacement)
-        self.duration = splits.last?.timeElapsed ?? 0
-        self.distance = splits.last?.displacement ?? 0
-        self.splitCount = splits.count
+        self.times = []
+        self.displacements = []
+        self.heights = nil
+        self.duration = 0
+        self.distance = 0
+        self.splitCount = 0
         self.photo = nil
+        update(data: data)
     }
 
     var method: Method {
@@ -51,15 +57,28 @@ final class SavedRun {
     }
 
     /// Rebuilds the samples. Each call gives them new ids, so keep the result rather than calling this from a view's body.
-    func makeSplits() -> [DistanceSplit] {
-        zip(times, displacements).map { DistanceSplit(timeElapsed: $0, displacement: $1) }
+    func makeData() -> RunData {
+        if let heights {
+            return .position(zip(times, zip(displacements, heights)).map { PositionSplit(timeElapsed: $0, x: $1.0, y: $1.1) })
+        } else {
+            return .distance(zip(times, displacements).map { DistanceSplit(timeElapsed: $0, displacement: $1) })
+        }
     }
 
-    func update(splits: [DistanceSplit]) {
-        self.times = splits.map(\.timeElapsed)
-        self.displacements = splits.map(\.displacement)
-        self.duration = splits.last?.timeElapsed ?? 0
-        self.distance = splits.last?.displacement ?? 0
-        self.splitCount = splits.count
+    func update(data: RunData) {
+        switch data {
+        case .distance(let splits):
+            self.times = splits.map(\.timeElapsed)
+            self.displacements = splits.map(\.displacement)
+            self.heights = nil
+        case .position(let splits):
+            self.times = splits.map(\.timeElapsed)
+            self.displacements = splits.map(\.x)
+            self.heights = splits.map(\.y)
+        }
+
+        self.duration = data.duration
+        self.distance = displacements.last ?? 0
+        self.splitCount = data.count
     }
 }

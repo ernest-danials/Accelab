@@ -20,8 +20,8 @@ struct AccelabApp: App {
             Group {
                 if let currentMethod = methodManager.currentMethod {
                     switch currentMethod {
-                    case .camera:
-                        CameraMethodView()
+                    case .camera, .projectile:
+                        CameraMethodView(method: currentMethod)
                     case .sensor:
                         SensorMethodView()
                     }

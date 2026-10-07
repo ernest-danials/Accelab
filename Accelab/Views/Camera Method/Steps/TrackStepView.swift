@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct TrackStepView: View {
+    let method: Method
     let scrubber: VideoScrubber
     @Binding var points: [TrackedPoint]
     let onBack: () -> Void
@@ -18,8 +19,6 @@ struct TrackStepView: View {
     @State private var trackingTask: Task<Void, Never>? = nil
     @State private var didFailToTrack: Bool = false
 
-    /// How far the clip moves on after each manual mark.
-    private static let markInterval: TimeInterval = 0.1
     /// A distance–time curve needs at least this many samples to be worth exporting.
     private static let minimumPointCount = 3
     /// A smaller box gives the tracker too little to hold on to.
@@ -27,6 +26,17 @@ struct TrackStepView: View {
     /// Trail markers closer together than this on screen are skipped, which keeps the trail readable
     /// and the number of glass shapes small.
     private static let minimumTrailMarkerSpacing: CGFloat = 14
+
+    /// How far the clip moves on after each manual mark.
+    private var markInterval: TimeInterval {
+        switch method {
+        case .camera, .sensor:
+            return 0.1
+        case .projectile:
+            // A flight lasts well under a second, so a mark every tenth of a second would leave too few points.
+            return 1.0 / 30
+        }
+    }
 
     private enum Mode {
         /// Nothing marked yet: the two ways of following the cart are offered.
@@ -42,7 +52,8 @@ struct TrackStepView: View {
         case reviewing
     }
 
-    init(scrubber: VideoScrubber, points: Binding<[TrackedPoint]>, onBack: @escaping () -> Void, onFinish: @escaping () -> Void) {
+    init(method: Method, scrubber: VideoScrubber, points: Binding<[TrackedPoint]>, onBack: @escaping () -> Void, onFinish: @escaping () -> Void) {
+        self.method = method
         self.scrubber = scrubber
         self._points = points
         self.onBack = onBack
@@ -58,6 +69,13 @@ struct TrackStepView: View {
 
         ZStack {
             VideoFrameViewer(scrubber: scrubber, onTap: handleTap) { mapping in
+                // Beneath the trail and the reticle, so they stay on top of it.
+                if method == .projectile, let origin = points.min(by: { $0.frameIndex < $1.frameIndex }) {
+                    ProjectileAxes(xDirection: CGFloat(TrackGeometry.horizontalDirection(of: points)))
+                        .position(mapping.viewPoint(for: origin.position))
+                        .allowsHitTesting(false)
+                }
+
                 // No blending distance, so neighbouring markers stay separate beads instead of merging.
                 GlassEffectContainer(spacing: 0) {
                     ZStack {
@@ -87,7 +105,7 @@ struct TrackStepView: View {
                     .transition(.blurReplace)
             }
 
-            VideoStepLayout(step: .track, instruction: instruction, isChromeHidden: isChromeHidden) {
+            VideoStepLayout(method: method, step: .track, instruction: instruction, isChromeHidden: isChromeHidden) {
                 GlassEffectContainer {
                     HStack(spacing: 8) {
                         switch mode {
@@ -132,21 +150,25 @@ struct TrackStepView: View {
 
     /// What to do right now, shown in the title card.
     private var instruction: LocalizedStringKey {
+        let subject = method.subject
+        let isProjectile = method == .projectile
+
         switch mode {
         case .choosing:
-            return "Go to the frame where the cart is released, then choose how to follow it."
+            return isProjectile ? "Go to the frame where the ball is launched, then choose how to follow it. Its first point becomes the origin." : "Go to the frame where the \(subject) is released, then choose how to follow it."
         case .drawingBox:
-            if didFailToTrack { return "Couldn't follow the cart. Fit the box more tightly and press Start, or mark it by hand instead." }
-            return box == nil ? "Drag a box around the cart on this frame." : "Drag the corners until the box fits the cart tightly, then press Start."
+            if didFailToTrack { return "Couldn't follow the \(subject). Fit the box more tightly and press Start, or mark it by hand instead." }
+            return box == nil ? "Drag a box around the \(subject) on this frame." : "Drag the corners until the box fits the \(subject) tightly, then press Start."
         case .tracking:
-            return "Following the cart through the video…"
+            return "Following the \(subject) through the video…"
         case .marking:
-            if points.isEmpty { return "Tap the cart. Pick a spot you can find again on every frame." }
-            return points.count < Self.minimumPointCount ? "Tap the same spot again. The video moves on after each tap." : "Keep tapping the same spot until the run is covered, then press ✓."
+            if points.isEmpty { return isProjectile ? "Tap the centre of the ball." : "Tap the \(subject). Pick a spot you can find again on every frame." }
+            if points.count < Self.minimumPointCount { return isProjectile ? "Tap the centre of the ball again. The video moves on after each tap." : "Tap the same spot again. The video moves on after each tap." }
+            return isProjectile ? "Keep tapping the ball until the flight is covered, then press ✓." : "Keep tapping the same spot until the run is covered, then press ✓."
         case .viewing:
-            return uncertainPointCount > 0 ? "^[\(uncertainPointCount) point](inflect: true) in orange may be off. Press Check to go through them." : "Scrub through to check the yellow trail follows the cart, then press ✓."
+            return uncertainPointCount > 0 ? "^[\(uncertainPointCount) point](inflect: true) in orange may be off. Press Check to go through them." : "Scrub through to check the yellow trail follows the \(subject), then press ✓."
         case .reviewing:
-            return "Is the ring on the cart? Tap where the cart really is, or press Keep if it's right."
+            return "Is the ring on the \(subject)? Tap where the \(subject) really is, or press Keep if it's right."
         }
     }
 
@@ -156,11 +178,11 @@ struct TrackStepView: View {
     private var methodChooser: some View {
         GlassEffectContainer {
             HStack(spacing: 12) {
-                methodCard(systemImage: "scope", title: "Track Automatically", detail: "Draw a box around the cart and Accelab follows it.", isRecommended: true) {
+                methodCard(systemImage: "scope", title: "Track Automatically", detail: "Draw a box around the \(method.subject) and Accelab follows it.", isRecommended: true) {
                     withAnimation { self.mode = .drawingBox }
                 }
 
-                methodCard(systemImage: "hand.tap", title: "Mark by Hand", detail: "Tap the cart yourself, frame by frame.", isRecommended: false) {
+                methodCard(systemImage: "hand.tap", title: "Mark by Hand", detail: "Tap the \(method.subject) yourself, frame by frame.", isRecommended: false) {
                     withAnimation { self.mode = .marking }
                 }
             }
@@ -178,7 +200,8 @@ struct TrackStepView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Image(systemName: systemImage)
                     .customFont(.title2, weight: .semibold)
-                    .foregroundStyle(isRecommended ? .white : Method.camera.color)
+                    // Not the method's own colour: the projectile's is too dark to read on dark glass.
+                    .foregroundStyle(isRecommended ? .white : .green1)
                     .padding(.bottom, 2)
 
                 Text(title)
@@ -320,7 +343,7 @@ struct TrackStepView: View {
         case .marking:
             if isOnVideo {
                 mark(at: position)
-                scrubber.step(bySeconds: Self.markInterval)
+                scrubber.step(bySeconds: markInterval)
             }
         case .reviewing:
             if isOnVideo {
@@ -461,6 +484,86 @@ struct TrackStepView: View {
 
     private var uncertainPointCount: Int {
         points.count(where: isUncertain)
+    }
+}
+
+/// The origin and the two axes a projectile's x and y are measured along, drawn at a constant size around
+/// the point it is placed on. Not glass, because the origin is a spot to be read exactly.
+private struct ProjectileAxes: View {
+    /// 1 when x counts up towards the right of the picture, -1 towards the left.
+    let xDirection: CGFloat
+
+    /// How long each axis is on screen, whatever the zoom.
+    private static let length: CGFloat = 56
+    /// How far past an arrow's tip the middle of its label sits.
+    private static let labelGap: CGFloat = 12
+    private static let labelSize: CGFloat = 16
+
+    var body: some View {
+        let reach = (Self.length + Self.labelGap) * 2 + 8
+        // The picture's y runs downwards, so height counts up the screen towards negative y.
+        let xAxis = CGVector(dx: xDirection, dy: 0)
+        let yAxis = CGVector(dx: 0, dy: -1)
+
+        ZStack {
+            arrow(direction: xAxis)
+            arrow(direction: yAxis)
+            label("x", direction: xAxis)
+            label("y", direction: yAxis)
+        }
+        .frame(width: reach, height: reach)
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Origin and axes")
+    }
+
+    /// A thin white line with a dark outline beneath it, so it reads over light and dark footage alike.
+    private func arrow(direction: CGVector) -> some View {
+        ZStack {
+            AxisArrow(direction: direction, length: Self.length)
+                .stroke(.black.opacity(0.5), style: StrokeStyle(lineWidth: 3.5, lineCap: .round, lineJoin: .round))
+
+            AxisArrow(direction: direction, length: Self.length)
+                .stroke(.white, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
+        }
+    }
+
+    /// The axis's name on a dark disc: white text alone, even with a shadow, is lost over light footage.
+    private func label(_ name: String, direction: CGVector) -> some View {
+        Text(verbatim: name)
+            .customFont(.caption2, weight: .bold)
+            .foregroundStyle(.white)
+            .frame(width: Self.labelSize, height: Self.labelSize)
+            .background(.black.opacity(0.55), in: .circle)
+            .offset(x: direction.dx * (Self.length + Self.labelGap), y: direction.dy * (Self.length + Self.labelGap))
+    }
+}
+
+/// A line from the middle of its rect, `length` long in `direction`, ending in an arrowhead.
+private struct AxisArrow: Shape {
+    let direction: CGVector
+    let length: CGFloat
+
+    private static let headLength: CGFloat = 8
+    /// How far each barb of the arrowhead leans back from the line, in radians (about 29°).
+    private static let headAngle: CGFloat = 0.5
+
+    func path(in rect: CGRect) -> Path {
+        let start = CGPoint(x: rect.midX, y: rect.midY)
+        let tip = CGPoint(x: start.x + direction.dx * length, y: start.y + direction.dy * length)
+        // The way back from the tip along the line, turned to either side for the two barbs.
+        let back = atan2(-direction.dy, -direction.dx)
+
+        var path = Path()
+        path.move(to: start)
+        path.addLine(to: tip)
+
+        for turn in [-Self.headAngle, Self.headAngle] {
+            path.move(to: tip)
+            path.addLine(to: CGPoint(x: tip.x + Self.headLength * cos(back + turn), y: tip.y + Self.headLength * sin(back + turn)))
+        }
+
+        return path
     }
 }
 
