@@ -23,6 +23,9 @@ struct TrackStepView: View {
 
     /// A distance–time curve needs at least this many samples to be worth exporting.
     private static let minimumPointCount = 3
+    /// Losing the cart with fewer frames than this left to go counts as finishing: a cart at the end of
+    /// its track or a ball that has just landed often goes on the last frame or two.
+    private static let lostFramesWorthMentioning = 3
     /// A smaller box gives the tracker too little to hold on to.
     static let minimumBoxSide: CGFloat = 20
     /// Trail markers closer together than this on screen are skipped, which keeps the trail readable
@@ -260,13 +263,13 @@ struct TrackStepView: View {
             GlassEffectContainer {
                 HStack(spacing: 12) {
                     methodCard(systemImage: "scope", title: "Track Again from Here", detail: "Draw a new box around the \(experiment.subject) on this frame.", isRecommended: true) {
-                        self.lostFrame = nil
+                        returnToLostFrame()
                         self.didFailToTrack = false
                         withAnimation { self.mode = .drawingBox }
                     }
 
                     methodCard(systemImage: "hand.tap", title: "Mark the Rest by Hand", detail: "Tap the \(experiment.subject) yourself from this frame on.", isRecommended: false) {
-                        self.lostFrame = nil
+                        returnToLostFrame()
                         withAnimation { self.mode = .marking }
                     }
                 }
@@ -275,6 +278,13 @@ struct TrackStepView: View {
         .padding(.horizontal)
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .environment(\.colorScheme, .dark)
+    }
+
+    /// Carries on from the frame the cart was lost on, wherever the clip has been scrubbed to since:
+    /// "from here" means that frame, and starting earlier would throw away good points.
+    private func returnToLostFrame() {
+        if let lostFrame { scrubber.seek(toFrame: lostFrame) }
+        self.lostFrame = nil
     }
 
     /// When tracking lost the cart, in seconds from the start of the kept range, as the scrub bar counts.
@@ -485,7 +495,7 @@ struct TrackStepView: View {
 
             // Stopped before the end without being asked to: said out loud, on the frame it happened, with
             // the ways of carrying on. Otherwise the trail just ends and looks finished.
-            if didStopEarly && !Task.isCancelled, let last = points.last {
+            if didStopEarly && !Task.isCancelled, let last = points.last, scrubber.trimRange.upperBound - last.frameIndex >= Self.lostFramesWorthMentioning {
                 let frame = min(last.frameIndex + 1, scrubber.trimRange.upperBound)
                 self.lostFrame = frame
                 scrubber.seek(toFrame: frame)

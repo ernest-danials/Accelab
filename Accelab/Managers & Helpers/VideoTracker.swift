@@ -88,6 +88,9 @@ nonisolated enum VideoTracker {
                 request.inputObservation = observation
             }
         }
+
+        // Running out of frames is finishing; the reader giving up partway is not.
+        if reader.status == .failed { throw reader.error ?? TrackingError.unreadable }
     }
 
     // MARK: - Vision coordinates
