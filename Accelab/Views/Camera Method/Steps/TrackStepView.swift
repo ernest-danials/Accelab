@@ -24,7 +24,7 @@ struct TrackStepView: View {
     /// A distance–time curve needs at least this many samples to be worth exporting.
     private static let minimumPointCount = 3
     /// Losing the cart with fewer frames than this left to go counts as finishing: a cart at the end of
-    /// its track or a ball that has just landed often goes on the last frame or two.
+    /// its track or a projectile that has just landed often goes on the last frame or two.
     private static let lostFramesWorthMentioning = 3
     /// A smaller box gives the tracker too little to hold on to.
     static let minimumBoxSide: CGFloat = 20
@@ -179,9 +179,9 @@ struct TrackStepView: View {
         case .lost:
             return "Accelab lost the \(subject) at this frame, before the end of the video. Track again from here, or mark the rest by hand."
         case .marking:
-            if points.isEmpty { return isProjectile ? "Tap the centre of the ball. This first point becomes the origin." : "Tap the \(subject). Pick a spot you can find again on every frame." }
-            if points.count < Self.minimumPointCount { return isProjectile ? "Tap the centre of the ball again. The video moves on after each tap." : "Tap the same spot again. The video moves on after each tap." }
-            return isProjectile ? "Keep tapping the ball until the flight is covered, then press ✓." : "Keep tapping the same spot until the run is covered, then press ✓."
+            if points.isEmpty { return isProjectile ? "Tap the centre of the object. This first point becomes the origin." : "Tap the \(subject). Pick a spot you can find again on every frame." }
+            if points.count < Self.minimumPointCount { return isProjectile ? "Tap the centre of the object again. The video moves on after each tap." : "Tap the same spot again. The video moves on after each tap." }
+            return isProjectile ? "Keep tapping the object until the flight is covered, then press ✓." : "Keep tapping the same spot until the run is covered, then press ✓."
         case .viewing:
             return uncertainPointCount > 0 ? "^[\(uncertainPointCount) point](inflect: true) in orange may be off. Press Check to go through them." : "Scrub through to check the yellow trail follows the \(subject), then press ✓."
         case .reviewing:

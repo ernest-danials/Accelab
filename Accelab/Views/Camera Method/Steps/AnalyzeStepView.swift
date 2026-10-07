@@ -148,7 +148,7 @@ struct AnalyzeStepView: View {
 
     /// Height against horizontal distance, fitted inside the frame with one scale on both axes so the path
     /// keeps its true shape. The lowest x sits on the left edge and the lowest y on the bottom edge. y is
-    /// positive upwards in the data and can be negative when the ball lands below where it started, so it
+    /// positive upwards in the data and can be negative when the projectile lands below where it started, so it
     /// is measured from the lowest sample and flipped for drawing.
     private func flightPoints(for splits: [PositionSplit]) -> [CGPoint] {
         guard let first = splits.first else { return [] }
@@ -161,7 +161,7 @@ struct AnalyzeStepView: View {
         let spanX = CGFloat(maxX - minX)
         let spanY = CGFloat(maxY - minY)
 
-        // An axis with no range cannot limit the scale. With no range on either (one sample, or a ball that
+        // An axis with no range cannot limit the scale. With no range on either (one sample, or a projectile that
         // never moved) there is nothing to scale, so everything sits in the bottom-left corner.
         let fittedScale = min(spanX > 0 ? size.width / spanX : .infinity, spanY > 0 ? size.height / spanY : .infinity)
         let scale = fittedScale.isFinite ? fittedScale : 0

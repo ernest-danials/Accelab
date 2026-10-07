@@ -10,7 +10,7 @@ import Foundation
 enum CameraExperiment: String, CaseIterable, Identifiable {
     /// A cart on a sloped track: distance along the track against time.
     case airTrack = "Air Track"
-    /// A ball in flight: x and y from where it started against time.
+    /// An object in flight: x and y from where it started against time.
     case projectile = "Projectile"
 
     var id: Self { self }
@@ -40,7 +40,7 @@ enum CameraExperiment: String, CaseIterable, Identifiable {
         case .airTrack:
             return "Film the cart with your iPhone's camera and track its motion from the video."
         case .projectile:
-            return "Film a ball in flight with your iPhone's camera and track its x and y position from the video."
+            return "Film an object in flight and track its x and y position from the video."
         }
     }
 
@@ -50,7 +50,7 @@ enum CameraExperiment: String, CaseIterable, Identifiable {
         case .airTrack:
             return "cart"
         case .projectile:
-            return "ball"
+            return "object"
         }
     }
 }

@@ -63,15 +63,15 @@ enum CameraMethodStep: CaseIterable, Identifiable {
         case .determineAngle:
             return "Measure and determine the slope of your track so it matches your desired slope."
         case .setup:
-            return experiment == .projectile ? "Prop your iPhone level and square-on to the ball's flight, with a known length visible beside it." : "Prop your iPhone so it faces the track square-on, with a known length visible along the track."
+            return experiment == .projectile ? "Prop your iPhone level and square-on to the flight, with a known length visible beside it." : "Prop your iPhone so it faces the track square-on, with a known length visible along the track."
         case .record:
-            return experiment == .projectile ? "Start recording, launch the ball, and stop once it lands." : "Start recording, release the cart, and stop once it reaches the end of the track."
+            return experiment == .projectile ? "Start recording, launch the object, and stop once it lands." : "Start recording, release the cart, and stop once it reaches the end of the track."
         case .trim:
             return experiment == .projectile ? "Keep only the flight, from the launch to the landing." : "Keep only the run, from the release to the end of the track."
         case .calibrate:
             return "Drag the two markers onto the ends of the known length and enter how long it is."
         case .track:
-            return experiment == .projectile ? "Follow the ball automatically, or mark it by hand, frame by frame." : "Follow the cart automatically, or switch on Tap and mark the same spot on it frame by frame."
+            return experiment == .projectile ? "Follow the object automatically, or mark it by hand, frame by frame." : "Follow the cart automatically, or switch on Tap and mark the same spot on it frame by frame."
         case .analyze:
             return experiment == .projectile ? "Turning the tracked points into x and y against time." : "Turning the tracked points into distance and time."
         case .completed:

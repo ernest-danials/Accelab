@@ -33,10 +33,10 @@ struct SetupStepView: View {
     private static let projectileTips: [Tip] = [
         Tip(systemImage: "iphone.gen3", title: "Keep it still", detail: "Prop your iPhone. Don't hold it."),
         Tip(systemImage: "level", title: "Keep it level", detail: "x and y follow the picture's edges, so a tilted iPhone tilts your data."),
-        Tip(systemImage: "viewfinder", title: "Face the flight", detail: "Square-on to the path the ball will take."),
+        Tip(systemImage: "viewfinder", title: "Face the flight", detail: "Square-on to the path the object will take."),
         Tip(systemImage: "arrow.up.left.and.arrow.down.right", title: "Stand back", detail: "Fit the whole flight with room to spare."),
-        Tip(systemImage: "ruler", title: "Include something to measure", detail: "Any object of known length works, at the same distance from the camera as the ball's flight."),
-        Tip(systemImage: "sun.max", title: "Use good light", detail: "Bright light keeps a fast ball sharp.")
+        Tip(systemImage: "ruler", title: "Include something to measure", detail: "Anything of known length works, at the same distance from the camera as the flight."),
+        Tip(systemImage: "sun.max", title: "Use good light", detail: "Bright light keeps a fast object sharp.")
     ]
 
     private var tips: [Tip] {
