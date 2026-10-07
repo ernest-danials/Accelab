@@ -56,6 +56,7 @@ struct PastRunDetailView: View {
             }
         }
         .navigationTitle(run.title)
+        .navigationSubtitle(run.caption)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if photo != nil {

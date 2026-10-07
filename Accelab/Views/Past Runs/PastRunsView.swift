@@ -54,7 +54,9 @@ struct PastRunsView: View {
 
     private func row(for run: SavedRun) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: run.imageName)
+            // The method's own symbol and colour, so the list reads as two methods. What a camera run
+            // filmed is in the caption.
+            Image(systemName: run.method.imageName)
                 .customFont(.title3, weight: .medium)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(run.method.color)
@@ -64,7 +66,7 @@ struct PastRunsView: View {
                 Text(run.title)
                     .customFont(.headline)
 
-                Text(run.date.formatted(date: .abbreviated, time: .shortened))
+                Text(run.caption)
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
             }

@@ -55,9 +55,16 @@ final class SavedRun {
         Method(rawValue: methodRawValue) ?? .camera
     }
 
+    /// What a camera run filmed. `nil` for a sensor run, which has no such choice. A camera run saved
+    /// before there was one filmed a cart on a track, so it counts as that.
+    var experiment: CameraExperiment? {
+        guard method == .camera else { return nil }
+        return experimentRawValue.flatMap(CameraExperiment.init(rawValue:)) ?? .airTrack
+    }
+
     /// `true` for a projectile run, whose samples are x and y rather than distance along a track.
     var isProjectile: Bool {
-        experimentRawValue == CameraExperiment.projectile.rawValue
+        experiment == .projectile
     }
 
     /// The name the user gave the run, or the one it has until then.
@@ -65,14 +72,17 @@ final class SavedRun {
         name ?? defaultTitle
     }
 
-    /// A name made from the run's method, or from "Projectile" for a projectile run.
+    /// A name made from the run's method. What a camera run filmed is not part of it: that is a choice
+    /// inside the method, shown beside the name in `caption`, where renaming the run leaves it in place.
     var defaultTitle: String {
-        "\(isProjectile ? CameraExperiment.projectile.rawValue : method.rawValue) Run"
+        "\(method.rawValue) Run"
     }
 
-    /// The symbol a list shows the run with.
-    var imageName: String {
-        isProjectile ? CameraExperiment.projectile.imageName : method.imageName
+    /// What goes under the run's name: what a camera run filmed, then when the run was made.
+    var caption: String {
+        let dateText = date.formatted(date: .abbreviated, time: .shortened)
+        guard let experiment else { return dateText }
+        return "\(experiment.rawValue) · \(dateText)"
     }
 
     /// Rebuilds the samples. Each call gives them new ids, so keep the result rather than calling this from a view's body.
