@@ -207,15 +207,27 @@ private struct LevelStatusLabel: View {
     var body: some View {
         // Lying flat, the tilt of the long edge can't be read.
         if !angleManager.isFlat {
+            let isLevel = angleManager.isCurrentAngleWithinMargin(targetAngle: 0, margin: margin)
+
             GlassStatusLabel {
-                if angleManager.isCurrentAngleWithinMargin(targetAngle: 0, margin: margin) {
-                    Label("Level", systemImage: "checkmark")
-                } else {
-                    Label("Tilted \(angleManager.currentAngle, specifier: "%.2f")°", systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                        .contentTransition(.numericText(value: angleManager.currentAngle))
+                // One icon and one colour that change, rather than two labels swapped, so going from
+                // level to tilted reads as the same label changing its mind.
+                HStack(spacing: 6) {
+                    Image(systemName: isLevel ? "checkmark" : "exclamationmark.triangle.fill")
+                        .contentTransition(.symbolEffect(.replace))
+
+                    if isLevel {
+                        Text("Level")
+                            .transition(.blurReplace)
+                    } else {
+                        Text("Tilted \(angleManager.currentAngle, specifier: "%.2f")°")
+                            .contentTransition(.numericText(value: angleManager.currentAngle))
+                            .transition(.blurReplace)
+                    }
                 }
+                .foregroundStyle(isLevel ? Color.primary : Color.orange)
             }
+            .animation(.smooth, value: isLevel)
         }
     }
 }
