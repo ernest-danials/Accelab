@@ -43,7 +43,9 @@ struct StepTitleView: View {
                 Text(description)
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
+                    // A method's start screen swaps one sentence for another (the camera's two experiments),
+                    // which fades. Rolling the letters over suits the short changes from step to step.
+                    .contentTransition(isProminent ? .opacity : .numericText())
                     .frame(maxWidth: isProminent ? 280 : nil, alignment: .leading)
             }
         }
