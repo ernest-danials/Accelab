@@ -5,10 +5,11 @@
 
 import Foundation
 
-/// The steps of the camera method. A projectile runs the same steps as a cart on a track without the two
-/// that set the track's angle, so the numbering and the wording follow what is being filmed.
+/// The steps of the camera method. A projectile runs the same steps on the video as a cart on a track.
+/// Before them it has no track whose angle is set, and levels the phone instead, so the numbering and the
+/// wording follow what is being filmed.
 enum CameraMethodStep: CaseIterable, Identifiable {
-    case idle, chooseAngle, determineAngle, setup, record, trim, calibrate, track, analyze, completed
+    case idle, chooseAngle, determineAngle, setup, level, record, trim, calibrate, track, analyze, completed
 
     var id: Self { self }
 
@@ -19,8 +20,8 @@ enum CameraMethodStep: CaseIterable, Identifiable {
 
     /// The steps that are numbered for the user, in the order this experiment goes through them.
     static func numberedSteps(for experiment: CameraExperiment) -> [CameraMethodStep] {
-        let videoSteps: [CameraMethodStep] = [.setup, .record, .trim, .calibrate, .track]
-        return experiment.measuresAngle ? [.chooseAngle, .determineAngle] + videoSteps : videoSteps
+        let videoSteps: [CameraMethodStep] = [.record, .trim, .calibrate, .track]
+        return experiment.measuresAngle ? [.chooseAngle, .determineAngle, .setup] + videoSteps : [.setup, .level] + videoSteps
     }
 
     func title(for experiment: CameraExperiment) -> String {
@@ -33,6 +34,8 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Determine the Angle"
         case .setup:
             return "Set Up Your Shot"
+        case .level:
+            return "Level Your iPhone"
         case .record:
             return experiment == .projectile ? "Record the Flight" : "Record the Run"
         case .trim:
@@ -64,6 +67,8 @@ enum CameraMethodStep: CaseIterable, Identifiable {
             return "Measure and determine the slope of your track so it matches your desired slope."
         case .setup:
             return experiment == .projectile ? "Prop your iPhone level and square-on to the flight, with a known length visible beside it." : "Prop your iPhone so it faces the track square-on, with a known length visible along the track."
+        case .level:
+            return "Prop your iPhone where it will film, then adjust it until it sits level."
         case .record:
             return experiment == .projectile ? "Start recording, launch the object, and stop once it lands." : "Start recording, release the cart, and stop once it reaches the end of the track."
         case .trim:

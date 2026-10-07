@@ -6,7 +6,7 @@ Accelab is an educational iPhone application developed using SwiftUI. It aims to
 ## Methods
 - **Camera (recommended):** film the cart with your iPhone, or choose a video you already have. Trim the clip, mark any known length in the shot for scale, then let Accelab track the cart automatically or mark it by hand.
   - **Air Track** follows a cart along its track and gives distance against time.
-  - **Projectile** follows an object in flight and gives its x and y position, measured from where it started, against time. There is no angle to set.
+  - **Projectile** follows an object in flight and gives its x and y position, measured from where it started, against time. There is no angle to set; Accelab helps you level the iPhone instead.
 - **Sensor:** attach your iPhone to the cart and measure its motion with the built-in sensors.
 
 ## Features

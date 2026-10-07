@@ -33,7 +33,7 @@ struct SettingsView: View {
                         }
                     }
                 } footer: {
-                    Text("When you set the track's angle, in either method, the measured angle must be within this margin of the target angle.")
+                    Text("When you set the track's angle, in either method, the measured angle must be within this margin of the target angle. Levelling your iPhone for a projectile uses the same margin.")
                 }
                 
                 Section {

@@ -16,9 +16,9 @@ struct CameraMethodView: View {
     @Environment(\.modelContext) private var modelContext
 
     @State private var currentStep: CameraMethodStep = .idle
-    /// What is being filmed, chosen on the idle step. A projectile runs the same steps as a cart on a track
-    /// without the two that set the track's angle, and ends with x and y against time rather than distance
-    /// along the track. Kept across runs, so a class doing one lab doesn't choose again each time.
+    /// What is being filmed, chosen on the idle step. A projectile runs the same steps as a cart on a track,
+    /// with one that levels the phone in place of the two that set the track's angle, and ends with x and y
+    /// against time rather than distance along the track. Kept across runs, so a class doing one lab doesn't choose again each time.
     @State private var experiment: CameraExperiment = .airTrack
 
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
@@ -79,9 +79,11 @@ struct CameraMethodView: View {
                         resetRun()
                         changeCurrentStep(to: .idle)
                     }
-                }, onContinue: { changeCurrentStep(to: .record) })
+                }, onContinue: { changeCurrentStep(to: experiment.measuresAngle ? .record : .level) })
+            case .level:
+                LevelStepView(marginOfErrorForAngle: marginOfErrorForAngle, currentDeviceOrientation: currentDeviceOrientation, isLevel: isLevel, isShowingDeviceOrientationNotValidDisclaimer: isShowingDeviceOrientationNotValidDisclaimer, onBack: { changeCurrentStep(to: .setup) }, onSkip: { changeCurrentStep(to: .record) }, onContinue: { changeCurrentStep(to: .record) })
             case .record:
-                RecordStepView(experiment: experiment, captureManager: captureManager, onBack: { changeCurrentStep(to: .setup) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
+                RecordStepView(experiment: experiment, captureManager: captureManager, onBack: { changeCurrentStep(to: experiment.measuresAngle ? .setup : .level) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
                     loadClip(at: url, isImported: true)
                     changeCurrentStep(to: .trim)
                 })
@@ -114,8 +116,8 @@ struct CameraMethodView: View {
                 CompletedStepView(desiredAngle: targetAngle, capturedAngle: capturedAngle, data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: true, videoURL: videoURL, photoURL: photoURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
         }
-        // Check the step first so the body only observes `currentAngle` while determining the angle.
-        .background((currentStep == .determineAngle && isAngleReadyToCapture) ? .green3.opacity(0.5) : .clear)
+        // Check the step first so the body only observes `currentAngle` while the angle is on screen.
+        .background(((currentStep == .determineAngle && isAngleReadyToCapture) || (currentStep == .level && isLevel)) ? .green3.opacity(0.5) : .clear)
         .onDeviceRotation { newOrientation in
             guard newOrientation.isLandscape else { return }
             withAnimation { self.currentDeviceOrientation = newOrientation }
@@ -138,13 +140,13 @@ struct CameraMethodView: View {
         updateAngleUpdates()
         updateCaptureSession(scenePhase: scenePhase)
 
-        // Keep the screen awake while the phone is on the track or filming, where nobody touches it.
-        UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .record].contains(step)
+        // Keep the screen awake while the phone is on the track, being levelled or filming, where nobody touches it.
+        UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .level, .record].contains(step)
     }
 
-    /// Runs angle updates only while determining the angle.
+    /// Runs angle updates only while the angle is on screen: the track's, or the phone's own when it is levelled.
     private func updateAngleUpdates() {
-        if currentStep == .determineAngle {
+        if currentStep == .determineAngle || currentStep == .level {
             angleManager.start()
         } else {
             angleManager.stop()
@@ -286,6 +288,11 @@ struct CameraMethodView: View {
 
     private var isAngleReadyToCapture: Bool {
         !isShowingDeviceOrientationNotValidDisclaimer && angleManager.isCurrentAngleWithinMargin(targetAngle: desiredAngle, margin: self.marginOfErrorForAngle)
+    }
+
+    /// `true` while the phone's long edge is horizontal, to within the same margin as a track's angle.
+    private var isLevel: Bool {
+        !isShowingDeviceOrientationNotValidDisclaimer && angleManager.isCurrentAngleWithinMargin(targetAngle: 0, margin: self.marginOfErrorForAngle)
     }
 }
 
