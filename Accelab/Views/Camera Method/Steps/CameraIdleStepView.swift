@@ -32,7 +32,7 @@ struct CameraIdleStepView: View {
     private static let cartCameraShift = CGSize(width: 46, height: 6)
     /// How far the camera sits from the middle of the projectile: below it, where it overlaps its edge
     /// and stays clear of the arc.
-    private static let projectileCameraShift = CGSize(width: 8, height: 64)
+    private static let projectileCameraShift = CGSize(width: 8, height: 52)
 
     /// Slower than a button's, so that the track can be seen breaking up into the dots.
     private static let changeAnimation: Animation = .smooth(duration: 0.7)
