@@ -84,7 +84,8 @@ struct AnalyzeStepView: View {
 
     private var verticalAxisLabel: String {
         switch data {
-        case .distance:
+        // A turntable run never reaches this camera-only step, so it is treated like a distance run.
+        case .distance, .rotation:
             return "Distance"
         case .position:
             return "Height"
@@ -93,7 +94,7 @@ struct AnalyzeStepView: View {
 
     private var horizontalAxisLabel: String {
         switch data {
-        case .distance:
+        case .distance, .rotation:
             return "Time"
         case .position:
             return "Distance"
@@ -102,7 +103,7 @@ struct AnalyzeStepView: View {
 
     private var graphDescription: String {
         switch data {
-        case .distance:
+        case .distance, .rotation:
             return "Graph of your run: distance against time"
         case .position:
             return "Graph of your run: height against horizontal distance"
@@ -112,7 +113,7 @@ struct AnalyzeStepView: View {
     /// What the pause claims to be doing; the second and third are the same for both kinds of run.
     private var phases: [String] {
         switch data {
-        case .distance:
+        case .distance, .rotation:
             return ["Fitting the track…", "Converting pixels to metres…", "Building your data…"]
         case .position:
             return ["Setting the origin…", "Converting pixels to metres…", "Building your data…"]
@@ -130,6 +131,8 @@ struct AnalyzeStepView: View {
         switch data {
         case .distance(let splits):
             return distancePoints(for: splits)
+        case .rotation:
+            return []
         case .position(let splits):
             return flightPoints(for: splits)
         }

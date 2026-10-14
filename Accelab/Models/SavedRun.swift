@@ -13,8 +13,8 @@ final class SavedRun {
     /// `nil` until the user names the run.
     var name: String?
     var methodRawValue: String
-    /// What a camera run filmed. `nil` for a sensor run, and for the camera runs saved before there was a
-    /// choice. Optional, like `heights`, so that those runs still open.
+    /// What a camera or a sensor run measured. `nil` for the runs saved before there was a choice. Optional,
+    /// like `heights`, so that those runs still open.
     var experimentRawValue: String?
     /// `nil` when the angle steps were skipped, and for a projectile run, which has none.
     var desiredAngle: Double?
@@ -26,27 +26,43 @@ final class SavedRun {
     /// A projectile's y, one for each of `displacements`. `nil` for a run along a track. Optional, and
     /// added without changing the properties above, so runs saved before projectile runs existed still open.
     var heights: [Double]?
+    /// A turntable run's angular velocity, one for each of `times`. `nil` for every other kind of run.
+    /// Optional, and added without changing the properties above, so older stores still open.
+    var angularVelocities: [Double]?
+    /// A turntable run's centripetal acceleration, one for each of `times`. `nil` for every other kind of
+    /// run. Optional, so older stores still open.
+    var centripetalAccelerations: [Double]?
+    /// A turntable run's tangential acceleration, one for each of `times`. `nil` for every other kind of
+    /// run. Optional, so older stores still open.
+    var tangentialAccelerations: [Double]?
     // Copied from the last sample, so a list row doesn't have to load the arrays.
     var duration: Double
     var distance: Double
     var splitCount: Int
+    /// A turntable run's fastest spin, copied from `angularVelocities` so a list row doesn't have to load
+    /// them. `nil` for every other kind of run. Optional, so older stores still open.
+    var peakAngularVelocity: Double?
     /// The JPEG of the tracked points, for a run filmed with the camera. The bytes rather than a file URL:
     /// the exported file lives in the temporary directory and goes when the run is reset.
     @Attribute(.externalStorage) var photo: Data?
 
-    init(method: Method, experiment: CameraExperiment? = nil, date: Date = .now, desiredAngle: Double?, capturedAngle: Double?, data: RunData) {
+    init(method: Method, experiment: CameraExperiment? = nil, sensorExperiment: SensorExperiment? = nil, date: Date = .now, desiredAngle: Double?, capturedAngle: Double?, data: RunData) {
         self.date = date
         self.name = nil
         self.methodRawValue = method.rawValue
-        self.experimentRawValue = experiment?.rawValue
+        self.experimentRawValue = experiment?.rawValue ?? sensorExperiment?.rawValue
         self.desiredAngle = desiredAngle
         self.capturedAngle = capturedAngle
         self.times = []
         self.displacements = []
         self.heights = nil
+        self.angularVelocities = nil
+        self.centripetalAccelerations = nil
+        self.tangentialAccelerations = nil
         self.duration = 0
         self.distance = 0
         self.splitCount = 0
+        self.peakAngularVelocity = nil
         self.photo = nil
         update(data: data)
     }
@@ -67,6 +83,18 @@ final class SavedRun {
         experiment == .projectile
     }
 
+    /// What a sensor run measured. `nil` for a camera run, which has no such choice. A sensor run saved
+    /// before there was one was strapped to a cart on a track, so it counts as that.
+    var sensorExperiment: SensorExperiment? {
+        guard method == .sensor else { return nil }
+        return experimentRawValue.flatMap(SensorExperiment.init(rawValue:)) ?? .airTrack
+    }
+
+    /// `true` for a turntable run, whose samples are angular velocity and accelerations rather than a distance.
+    var isRotation: Bool {
+        sensorExperiment == .circularMotion
+    }
+
     /// The name the user gave the run, or the one it has until then.
     var title: String {
         name ?? defaultTitle
@@ -78,16 +106,18 @@ final class SavedRun {
         "\(method.rawValue) Run"
     }
 
-    /// What goes under the run's name: what a camera run filmed, then when the run was made.
+    /// What goes under the run's name: what the run measured, then when the run was made.
     var caption: String {
         let dateText = date.formatted(date: .abbreviated, time: .shortened)
-        guard let experiment else { return dateText }
-        return "\(experiment.rawValue) · \(dateText)"
+        guard let experimentName = experiment?.rawValue ?? sensorExperiment?.rawValue else { return dateText }
+        return "\(experimentName) · \(dateText)"
     }
 
     /// Rebuilds the samples. Each call gives them new ids, so keep the result rather than calling this from a view's body.
     func makeData() -> RunData {
-        if let heights {
+        if let angularVelocities, let centripetalAccelerations, let tangentialAccelerations {
+            return .rotation(zip(times, zip(angularVelocities, zip(centripetalAccelerations, tangentialAccelerations))).map { RotationSplit(timeElapsed: $0, angularVelocity: $1.0, centripetalAcceleration: $1.1.0, tangentialAcceleration: $1.1.1) })
+        } else if let heights {
             return .position(zip(times, zip(displacements, heights)).map { PositionSplit(timeElapsed: $0, x: $1.0, y: $1.1) })
         } else {
             return .distance(zip(times, displacements).map { DistanceSplit(timeElapsed: $0, displacement: $1) })
@@ -100,10 +130,26 @@ final class SavedRun {
             self.times = splits.map(\.timeElapsed)
             self.displacements = splits.map(\.displacement)
             self.heights = nil
+            self.angularVelocities = nil
+            self.centripetalAccelerations = nil
+            self.tangentialAccelerations = nil
+            self.peakAngularVelocity = nil
         case .position(let splits):
             self.times = splits.map(\.timeElapsed)
             self.displacements = splits.map(\.x)
             self.heights = splits.map(\.y)
+            self.angularVelocities = nil
+            self.centripetalAccelerations = nil
+            self.tangentialAccelerations = nil
+            self.peakAngularVelocity = nil
+        case .rotation(let splits):
+            self.times = splits.map(\.timeElapsed)
+            self.displacements = []
+            self.heights = nil
+            self.angularVelocities = splits.map(\.angularVelocity)
+            self.centripetalAccelerations = splits.map(\.centripetalAcceleration)
+            self.tangentialAccelerations = splits.map(\.tangentialAcceleration)
+            self.peakAngularVelocity = splits.map(\.angularVelocity).max()
         }
 
         self.duration = data.duration

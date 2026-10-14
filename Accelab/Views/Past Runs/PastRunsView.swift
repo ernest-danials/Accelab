@@ -74,12 +74,20 @@ struct PastRunsView: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(run.distance, specifier: "%.2f") m in \(run.duration, specifier: "%.2f") s")
-                    .customFont(.subheadline, weight: .medium)
-                    .monospacedDigit()
+                Group {
+                    if run.isRotation {
+                        Text("\(run.peakAngularVelocity ?? 0, specifier: "%.2f") rad/s in \(run.duration, specifier: "%.2f") s")
+                    } else {
+                        Text("\(run.distance, specifier: "%.2f") m in \(run.duration, specifier: "%.2f") s")
+                    }
+                }
+                .customFont(.subheadline, weight: .medium)
+                .monospacedDigit()
 
                 Group {
-                    if run.isProjectile {
+                    if run.isRotation {
+                        Text("Fastest spin")
+                    } else if run.isProjectile {
                         // So the number above isn't taken for the length of the path.
                         Text("Horizontal distance")
                     } else if let desiredAngle = run.desiredAngle {
