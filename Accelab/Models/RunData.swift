@@ -14,6 +14,8 @@ enum RunData: Hashable, Sendable {
     case position([PositionSplit])
     /// A turntable's angular velocity and the acceleration on it against time.
     case rotation([RotationSplit])
+    /// A marker going round a circle: its x, y and angle about the circle's centre against time.
+    case circle([CircleSplit])
 
     var count: Int {
         switch self {
@@ -22,6 +24,8 @@ enum RunData: Hashable, Sendable {
         case .position(let splits):
             return splits.count
         case .rotation(let splits):
+            return splits.count
+        case .circle(let splits):
             return splits.count
         }
     }
@@ -36,6 +40,8 @@ enum RunData: Hashable, Sendable {
         case .position(let splits):
             return splits.last?.timeElapsed ?? 0
         case .rotation(let splits):
+            return splits.last?.timeElapsed ?? 0
+        case .circle(let splits):
             return splits.last?.timeElapsed ?? 0
         }
     }

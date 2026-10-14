@@ -39,8 +39,27 @@ struct SetupStepView: View {
         Tip(systemImage: "sun.max", title: "Use good light", detail: "Bright light keeps a fast object sharp.")
     ]
 
+    // Filmed from above, which the level step can't check (a phone looking straight down is lying flat), so
+    // "Film straight down" is a tip here instead. A round dot, because the tracker follows an object by how
+    // it looks inside its box, and a pattern turns with the table while a dot looks the same all the way round.
+    private static let circularMotionTips: [Tip] = [
+        Tip(systemImage: "iphone.gen3", title: "Keep it still", detail: "Prop your iPhone. Don't hold it."),
+        Tip(systemImage: "arrow.down.to.line", title: "Film straight down", detail: "Directly above the centre, so the circle isn't squashed into an oval."),
+        Tip(systemImage: "circle.fill", title: "Use a round dot", detail: "A plain round sticker on what turns. A dot looks the same from every angle."),
+        Tip(systemImage: "arrow.up.left.and.arrow.down.right", title: "Fit the whole circle", detail: "The marker in view all the way round, with room to spare."),
+        Tip(systemImage: "ruler", title: "Include something to measure", detail: "Anything of known length works, lying level with the circle."),
+        Tip(systemImage: "sun.max", title: "Use good light", detail: "Bright light keeps the moving dot sharp.")
+    ]
+
     private var tips: [Tip] {
-        experiment == .projectile ? Self.projectileTips : Self.cameraTips
+        switch experiment {
+        case .airTrack:
+            return Self.cameraTips
+        case .projectile:
+            return Self.projectileTips
+        case .circularMotion:
+            return Self.circularMotionTips
+        }
     }
 
     private static let tipsPerRow = 3

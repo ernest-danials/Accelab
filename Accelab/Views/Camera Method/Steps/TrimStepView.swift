@@ -46,7 +46,14 @@ struct TrimStepView: View {
 
     /// What to keep: the part from the start of the motion to its end.
     private var instruction: LocalizedStringKey {
-        experiment == .projectile ? "Drag the two handles so only the flight is kept, from the launch to the landing." : "Drag the two handles so only the run is kept, from the release to the end of the track."
+        switch experiment {
+        case .airTrack:
+            return "Drag the two handles so only the run is kept, from the release to the end of the track."
+        case .projectile:
+            return "Drag the two handles so only the flight is kept, from the launch to the landing."
+        case .circularMotion:
+            return "Drag the two handles so only the turns are kept, from when the marker is set going."
+        }
     }
 }
 

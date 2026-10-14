@@ -28,6 +28,8 @@ enum CSVExporter {
             return ["time_s", "x_m", "y_m"]
         case .rotation:
             return ["time_s", "angular_velocity_rad_s", "centripetal_acceleration_m_s2", "tangential_acceleration_m_s2"]
+        case .circle:
+            return ["time_s", "x_m", "y_m", "angle_rad", "radius_m"]
         }
     }
 
@@ -40,6 +42,8 @@ enum CSVExporter {
             return splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y)] }
         case .rotation(let splits):
             return splits.map { [timeText(for: $0.timeElapsed), valueText(for: $0.angularVelocity), valueText(for: $0.centripetalAcceleration), valueText(for: $0.tangentialAcceleration)] }
+        case .circle(let splits):
+            return splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y), valueText(for: $0.angle), lengthText(for: $0.radius)] }
         }
     }
 
@@ -53,7 +57,8 @@ enum CSVExporter {
         return text == "-0.00000" ? "0.00000" : text
     }
 
-    /// An angular velocity or an acceleration, which only needs four decimals: a sensor is not as exact as a ruler in a video.
+    /// An angular velocity, an acceleration or an angle, which only needs four decimals: a sensor is not as
+    /// exact as a ruler in a video, and a ten-thousandth of a radian is well under a pixel on any circle that fits the frame.
     private static func valueText(for value: Double) -> String {
         let text = String(format: "%.4f", value)
         // Same as `lengthText`: a value that rounds to nothing loses its minus sign.

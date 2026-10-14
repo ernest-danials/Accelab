@@ -87,6 +87,9 @@ struct PastRunsView: View {
                 Group {
                     if run.isRotation {
                         Text("Fastest spin")
+                    } else if run.isCircle {
+                        // The number above is the circle's radius, not a distance travelled.
+                        Text("Radius")
                     } else if run.isProjectile {
                         // So the number above isn't taken for the length of the path.
                         Text("Horizontal distance")

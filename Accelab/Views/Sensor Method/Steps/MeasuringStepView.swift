@@ -83,6 +83,9 @@ struct MeasuringStepView: View {
             return [Quantity(systemImage: "stopwatch.fill", unit: "Second", value: { splits[$0].timeElapsed }), Quantity(systemImage: "arrow.right", unit: "x, m", value: { splits[$0].x }), Quantity(systemImage: "arrow.up", unit: "y, m", value: { splits[$0].y })]
         case .rotation(let splits):
             return [Quantity(systemImage: "stopwatch.fill", unit: "Second", value: { splits[$0].timeElapsed }), Quantity(systemImage: "gyroscope", unit: "rad/s", value: { splits[$0].angularVelocity }), Quantity(systemImage: "arrow.down.to.line", unit: "m/s²", value: { splits[$0].centripetalAcceleration })]
+        case .circle(let splits):
+            // Not measured by this method either, but shown the same way should it ever be.
+            return [Quantity(systemImage: "stopwatch.fill", unit: "Second", value: { splits[$0].timeElapsed }), Quantity(systemImage: "angle", unit: "rad", value: { splits[$0].angle }), Quantity(systemImage: "circle", unit: "Metre", value: { splits[$0].radius })]
         }
     }
 }

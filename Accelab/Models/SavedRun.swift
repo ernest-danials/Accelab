@@ -21,10 +21,10 @@ final class SavedRun {
     var capturedAngle: Double?
     // The samples as plain arrays, so `DistanceSplit` and `PositionSplit` stay free of persistence.
     var times: [Double]
-    /// The distance along the track, or a projectile's x.
+    /// The distance along the track, or a projectile's or a circle run's x.
     var displacements: [Double]
-    /// A projectile's y, one for each of `displacements`. `nil` for a run along a track. Optional, and
-    /// added without changing the properties above, so runs saved before projectile runs existed still open.
+    /// A projectile's or a circle run's y, one for each of `displacements`. `nil` for a run along a track.
+    /// Optional, and added without changing the properties above, so runs saved before projectile runs existed still open.
     var heights: [Double]?
     /// A turntable run's angular velocity, one for each of `times`. `nil` for every other kind of run.
     /// Optional, and added without changing the properties above, so older stores still open.
@@ -35,8 +35,16 @@ final class SavedRun {
     /// A turntable run's tangential acceleration, one for each of `times`. `nil` for every other kind of
     /// run. Optional, so older stores still open.
     var tangentialAccelerations: [Double]?
+    /// A circle run's angle about the centre, one for each of `times`; its x and y are in `displacements`
+    /// and `heights`, as a projectile's are. `nil` for every other kind of run. Optional, so older stores still open.
+    var angles: [Double]?
+    /// A circle run's distance from the centre, one for each of `times`. `nil` for every other kind of
+    /// run. Optional, so older stores still open.
+    var radii: [Double]?
     // Copied from the last sample, so a list row doesn't have to load the arrays.
     var duration: Double
+    /// The run's headline length: the distance along the track, a projectile's final x, or a circle
+    /// run's radius.
     var distance: Double
     var splitCount: Int
     /// A turntable run's fastest spin, copied from `angularVelocities` so a list row doesn't have to load
@@ -59,6 +67,8 @@ final class SavedRun {
         self.angularVelocities = nil
         self.centripetalAccelerations = nil
         self.tangentialAccelerations = nil
+        self.angles = nil
+        self.radii = nil
         self.duration = 0
         self.distance = 0
         self.splitCount = 0
@@ -81,6 +91,11 @@ final class SavedRun {
     /// `true` for a projectile run, whose samples are x and y rather than distance along a track.
     var isProjectile: Bool {
         experiment == .projectile
+    }
+
+    /// `true` for a run filmed going round a circle, whose samples are x, y and angle about its centre.
+    var isCircle: Bool {
+        experiment == .circularMotion
     }
 
     /// What a sensor run measured. `nil` for a camera run, which has no such choice. A sensor run saved
@@ -117,6 +132,9 @@ final class SavedRun {
     func makeData() -> RunData {
         if let angularVelocities, let centripetalAccelerations, let tangentialAccelerations {
             return .rotation(zip(times, zip(angularVelocities, zip(centripetalAccelerations, tangentialAccelerations))).map { RotationSplit(timeElapsed: $0, angularVelocity: $1.0, centripetalAcceleration: $1.1.0, tangentialAcceleration: $1.1.1) })
+        } else if let heights, let angles, let radii {
+            // Before `heights` alone: a circle run has heights too.
+            return .circle(zip(times, zip(displacements, zip(heights, zip(angles, radii)))).map { CircleSplit(timeElapsed: $0, x: $1.0, y: $1.1.0, angle: $1.1.1.0, radius: $1.1.1.1) })
         } else if let heights {
             return .position(zip(times, zip(displacements, heights)).map { PositionSplit(timeElapsed: $0, x: $1.0, y: $1.1) })
         } else {
@@ -133,7 +151,10 @@ final class SavedRun {
             self.angularVelocities = nil
             self.centripetalAccelerations = nil
             self.tangentialAccelerations = nil
+            self.angles = nil
+            self.radii = nil
             self.peakAngularVelocity = nil
+            self.distance = displacements.last ?? 0
         case .position(let splits):
             self.times = splits.map(\.timeElapsed)
             self.displacements = splits.map(\.x)
@@ -141,7 +162,10 @@ final class SavedRun {
             self.angularVelocities = nil
             self.centripetalAccelerations = nil
             self.tangentialAccelerations = nil
+            self.angles = nil
+            self.radii = nil
             self.peakAngularVelocity = nil
+            self.distance = displacements.last ?? 0
         case .rotation(let splits):
             self.times = splits.map(\.timeElapsed)
             self.displacements = []
@@ -149,11 +173,25 @@ final class SavedRun {
             self.angularVelocities = splits.map(\.angularVelocity)
             self.centripetalAccelerations = splits.map(\.centripetalAcceleration)
             self.tangentialAccelerations = splits.map(\.tangentialAcceleration)
+            self.angles = nil
+            self.radii = nil
             self.peakAngularVelocity = splits.map(\.angularVelocity).max()
+            self.distance = 0
+        case .circle(let splits):
+            self.times = splits.map(\.timeElapsed)
+            self.displacements = splits.map(\.x)
+            self.heights = splits.map(\.y)
+            self.angularVelocities = nil
+            self.centripetalAccelerations = nil
+            self.tangentialAccelerations = nil
+            self.angles = splits.map(\.angle)
+            self.radii = splits.map(\.radius)
+            self.peakAngularVelocity = nil
+            // The radius is the length that says what the run was, as a projectile's final x does.
+            self.distance = splits.fittedRadius
         }
 
         self.duration = data.duration
-        self.distance = displacements.last ?? 0
         self.splitCount = data.count
     }
 }
