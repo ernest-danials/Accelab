@@ -27,7 +27,7 @@ enum CSVExporter {
         case .position:
             return ["time_s", "x_m", "y_m"]
         case .rotation:
-            return ["time_s", "angular_velocity_rad_s", "centripetal_acceleration_m_s2", "tangential_acceleration_m_s2"]
+            return ["time_s", "angular_velocity_rad_s", "angular_velocity_squared_rad2_s2", "centripetal_acceleration_m_s2", "tangential_acceleration_m_s2"]
         case .circle:
             return ["time_s", "x_m", "y_m", "angle_rad", "radius_m"]
         }
@@ -41,7 +41,7 @@ enum CSVExporter {
         case .position(let splits):
             return splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y)] }
         case .rotation(let splits):
-            return splits.map { [timeText(for: $0.timeElapsed), valueText(for: $0.angularVelocity), valueText(for: $0.centripetalAcceleration), valueText(for: $0.tangentialAcceleration)] }
+            return splits.map { [timeText(for: $0.timeElapsed), valueText(for: $0.angularVelocity), valueText(for: $0.angularVelocity * $0.angularVelocity), valueText(for: $0.centripetalAcceleration), valueText(for: $0.tangentialAcceleration)] }
         case .circle(let splits):
             return splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y), valueText(for: $0.angle), lengthText(for: $0.radius)] }
         }

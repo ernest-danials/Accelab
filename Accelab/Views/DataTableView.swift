@@ -21,7 +21,7 @@ struct DataTableView: View {
         case .position:
             self.headings = ["Time (s)", "x (m)", "y (m)"]
         case .rotation:
-            self.headings = ["Time (s)", "ω (rad/s)", "Centripetal (m/s²)", "Tangential (m/s²)"]
+            self.headings = ["Time (s)", "ω (rad/s)", "ω² (rad²/s²)", "Centripetal (m/s²)", "Tangential (m/s²)"]
         case .circle:
             self.headings = ["Time (s)", "x (m)", "y (m)", "θ (rad)", "Radius (m)"]
         }
