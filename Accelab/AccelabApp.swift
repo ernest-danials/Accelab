@@ -12,7 +12,6 @@ import SwiftData
 struct AccelabApp: App {
     @State private var angleManager: AngleManager = .init()
     @State private var motionMeasuringManager: MotionMeasuringManager = .init()
-    @State private var rotationMeasuringManager: RotationMeasuringManager = .init()
     @State private var cameraCaptureManager: CameraCaptureManager = .init()
     @State private var methodManager: MethodManager = .init()
     
@@ -36,7 +35,6 @@ struct AccelabApp: App {
         }
         .environment(angleManager)
         .environment(motionMeasuringManager)
-        .environment(rotationMeasuringManager)
         .environment(cameraCaptureManager)
         .environment(methodManager)
         .modelContainer(for: SavedRun.self)

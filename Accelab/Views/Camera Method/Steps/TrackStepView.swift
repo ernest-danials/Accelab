@@ -40,10 +40,6 @@ struct TrackStepView: View {
         case .projectile:
             // A flight lasts well under a second, so a mark every tenth of a second would leave too few points.
             return 1.0 / 30
-        case .circularMotion:
-            // Turns last seconds: a tenth of a second gives ten points a turn at one turn a second, which is
-            // plenty for the angle against time, where a mark every frame would make three turns ninety taps.
-            return 0.1
         }
     }
 
@@ -84,16 +80,6 @@ struct TrackStepView: View {
                 if experiment == .projectile, let origin = points.min(by: { $0.frameIndex < $1.frameIndex }) {
                     ProjectileAxes(xDirection: CGFloat(TrackGeometry.horizontalDirection(of: points)))
                         .position(mapping.viewPoint(for: origin.position))
-                        .allowsHitTesting(false)
-                }
-
-                // The circle the data will be measured about, fitted to the points as they go on, so the
-                // fit is seen rather than taken on trust. Beneath the trail for the same reason as the axes.
-                if experiment == .circularMotion, let circle = fittedCircle {
-                    let center = mapping.viewPoint(for: circle.center)
-                    let edge = mapping.viewPoint(for: CGPoint(x: circle.center.x + circle.radius, y: circle.center.y))
-                    CircleOverlay(radius: edge.x - center.x)
-                        .position(center)
                         .allowsHitTesting(false)
                 }
 
@@ -174,14 +160,7 @@ struct TrackStepView: View {
     }
 
     private var canFinish: Bool {
-        // For a circle, three points in a line are not enough: nothing could be measured about a centre.
-        (mode == .viewing || mode == .marking) && points.count >= Self.minimumPointCount && (experiment != .circularMotion || fittedCircle != nil)
-    }
-
-    /// The circle through the points, in pixels of the frame as it is shown. `nil` until three points
-    /// are marked, and for points that lie along a line.
-    private var fittedCircle: (center: CGPoint, radius: Double)? {
-        TrackGeometry.fitCircle(through: points.map(\.position))
+        (mode == .viewing || mode == .marking) && points.count >= Self.minimumPointCount
     }
 
     /// What to do right now, shown in the title card.
@@ -191,14 +170,7 @@ struct TrackStepView: View {
 
         switch mode {
         case .choosing:
-            switch experiment {
-            case .airTrack:
-                return "Go to the frame where the cart is released, then choose how to follow it."
-            case .projectile:
-                return "Go to the frame where the object is launched, then choose how to follow it."
-            case .circularMotion:
-                return "Go to the frame where the marker starts going round, then choose how to follow it."
-            }
+            return "Go to the frame where the \(subject) is \(isProjectile ? "launched" : "released"), then choose how to follow it."
         case .drawingBox:
             if didFailToTrack { return "Couldn't follow the \(subject). Fit the box more tightly and press Start, or mark it by hand instead." }
             return box == nil ? "Drag a box around the \(subject) on this frame." : "Drag the corners until the box fits the \(subject) tightly, then press Start."
@@ -209,18 +181,9 @@ struct TrackStepView: View {
         case .marking:
             if points.isEmpty { return isProjectile ? "Tap the centre of the object. This first point becomes the origin." : "Tap the \(subject). Pick a spot you can find again on every frame." }
             if points.count < Self.minimumPointCount { return isProjectile ? "Tap the centre of the object again. The video moves on after each tap." : "Tap the same spot again. The video moves on after each tap." }
-            switch experiment {
-            case .airTrack:
-                return "Keep tapping the same spot until the run is covered, then press ✓."
-            case .projectile:
-                return "Keep tapping the object until the flight is covered, then press ✓."
-            case .circularMotion:
-                return fittedCircle == nil ? "These points lie in a line, so no circle fits them yet. Keep tapping the marker round the turn." : "Keep tapping the marker until the turns are covered, then press ✓."
-            }
+            return isProjectile ? "Keep tapping the object until the flight is covered, then press ✓." : "Keep tapping the same spot until the run is covered, then press ✓."
         case .viewing:
-            if uncertainPointCount > 0 { return "^[\(uncertainPointCount) point](inflect: true) in orange may be off. Press Check to go through them." }
-            if experiment == .circularMotion && fittedCircle == nil { return "These points lie in a line, so no circle fits them. Mark more of the turn before finishing." }
-            return "Scrub through to check the yellow trail follows the \(subject), then press ✓."
+            return uncertainPointCount > 0 ? "^[\(uncertainPointCount) point](inflect: true) in orange may be off. Press Check to go through them." : "Scrub through to check the yellow trail follows the \(subject), then press ✓."
         case .reviewing:
             return "Is the ring on the \(subject)? Tap where the \(subject) really is, or press Keep if it's right."
         }
@@ -616,48 +579,6 @@ struct TrackStepView: View {
 
     private var uncertainPointCount: Int {
         points.count(where: isUncertain)
-    }
-}
-
-/// The circle fitted through the points so far, with its centre, drawn to the size it has on screen around
-/// the point it is placed on. Not glass: the centre is a spot to be read exactly, and the ring would bend
-/// the marker it passes over.
-private struct CircleOverlay: View {
-    /// The ring's radius on screen, at the current zoom.
-    let radius: CGFloat
-
-    /// How long each arm of the cross at the centre is.
-    private static let crossArm: CGFloat = 8
-
-    var body: some View {
-        ZStack {
-            // The same thin white line over a dark outline as the axes, so it reads over any footage.
-            Circle()
-                .stroke(.black.opacity(0.5), lineWidth: 3.5)
-                .stroke(.white, lineWidth: 1.5)
-                .frame(width: radius * 2, height: radius * 2)
-
-            CenterCross(arm: Self.crossArm)
-                .stroke(.black.opacity(0.5), style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
-                .stroke(.white, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
-                .frame(width: Self.crossArm * 2, height: Self.crossArm * 2)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("The fitted circle and its centre")
-    }
-}
-
-/// A plus sign through the middle of its rect, each arm `arm` long.
-private struct CenterCross: Shape {
-    let arm: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.midX - arm, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.midX + arm, y: rect.midY))
-        path.move(to: CGPoint(x: rect.midX, y: rect.midY - arm))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.midY + arm))
-        return path
     }
 }
 

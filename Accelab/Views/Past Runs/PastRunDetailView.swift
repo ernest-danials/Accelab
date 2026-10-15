@@ -25,20 +25,10 @@ struct PastRunDetailView: View {
 
     init(run: SavedRun) {
         self.run = run
-        // Empty until the samples are loaded, but already the run's own kind (a turntable's, a circle's, a
-        // projectile's or a cart's), so the summary doesn't open on another kind's layout. Asked of the run rather than of its samples: a list builds
+        // Empty until the samples are loaded, but already the run's own kind, so the summary doesn't
+        // open on the other kind's layout. Asked of the run rather than of its samples: a list builds
         // this view for every row, which shouldn't load each run's arrays.
-        let emptyData: RunData
-        if run.isRotation {
-            emptyData = .rotation([])
-        } else if run.isCircle {
-            emptyData = .circle([])
-        } else if run.isProjectile {
-            emptyData = .position([])
-        } else {
-            emptyData = .distance([])
-        }
-        self._data = State(initialValue: emptyData)
+        self._data = State(initialValue: run.isProjectile ? .position([]) : .distance([]))
     }
 
     var body: some View {

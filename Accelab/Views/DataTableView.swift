@@ -20,10 +20,6 @@ struct DataTableView: View {
             self.headings = ["Time (s)", "Distance (m)"]
         case .position:
             self.headings = ["Time (s)", "x (m)", "y (m)"]
-        case .rotation:
-            self.headings = ["Time (s)", "ω (rad/s)", "Centripetal (m/s²)", "Tangential (m/s²)"]
-        case .circle:
-            self.headings = ["Time (s)", "x (m)", "y (m)", "θ (rad)", "Radius (m)"]
         }
         self.rows = CSVExporter.rows(for: data)
     }
@@ -77,18 +73,4 @@ struct DataTableView: View {
 
 #Preview("Projectile") {
     DataTableView(data: .position((0..<40).map { PositionSplit(timeElapsed: Double($0) / 60, x: 2.5 * Double($0) / 60, y: 3 * Double($0) / 60 - 4.905 * pow(Double($0) / 60, 2)) }))
-}
-
-#Preview("Circle") {
-    DataTableView(data: .circle((0..<40).map { index in
-        let angle = 2 * Double.pi * Double(index) / 30
-        return CircleSplit(timeElapsed: Double(index) / 15, x: 0.2 * cos(angle), y: 0.2 * sin(angle), angle: angle, radius: 0.2)
-    }))
-}
-
-#Preview("Circular Motion") {
-    DataTableView(data: .rotation((0..<40).map { index in
-        let angularVelocity = index < 20 ? 0.4 * Double(index) : 0.4 * Double(40 - index)
-        return RotationSplit(timeElapsed: Double(index) / 4, angularVelocity: angularVelocity, centripetalAcceleration: angularVelocity * angularVelocity * 0.15, tangentialAcceleration: index < 20 ? 0.06 : -0.06)
-    }))
 }

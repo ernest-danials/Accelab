@@ -12,7 +12,7 @@ enum SensorMethodStep: CaseIterable, Identifiable {
     
     var id: Self { self }
     
-    func title(for experiment: SensorExperiment) -> String {
+    var title: String {
         switch self {
         case .idle:
             return Method.sensor.rawValue
@@ -21,7 +21,7 @@ enum SensorMethodStep: CaseIterable, Identifiable {
         case .determineAngle:
             return "Determine the Angle"
         case .standby:
-            return experiment.measuresAngle ? "Attach Your iPhone to the Cart" : "Place Your iPhone on the Turntable"
+            return "Attach Your iPhone to the Cart"
         case .countdown:
             return "Get Ready"
         case .measuring:
@@ -31,8 +31,7 @@ enum SensorMethodStep: CaseIterable, Identifiable {
         }
     }
     
-    /// "Step N". A turntable has no angle to set, so its steps start at the standby.
-    func subtitle(for experiment: SensorExperiment) -> String {
+    var subtitle: String {
         switch self {
         case .idle:
             return ""
@@ -41,30 +40,30 @@ enum SensorMethodStep: CaseIterable, Identifiable {
         case .determineAngle:
             return "Step 2"
         case .standby:
-            return experiment.measuresAngle ? "Step 3" : "Step 1"
+            return "Step 3"
         case .countdown:
-            return experiment.measuresAngle ? "Step 4" : "Step 2"
+            return "Step 4"
         case .measuring:
-            return experiment.measuresAngle ? "Step 4" : "Step 2"
+            return "Step 4"
         case .completed:
             return ""
         }
     }
     
-    func description(for experiment: SensorExperiment) -> String {
+    var description: String {
         switch self {
         case .idle:
-            return experiment.description
+            return Method.sensor.description
         case .chooseAngle:
             return "Choose the desired slope of your track."
         case .determineAngle:
             return "Measure and determine the slope of your track so it matches your desired slope."
         case .standby:
-            return experiment.measuresAngle ? "Make sure your iPhone's camera is facing the front of the cart." : "Lay it flat, with its top edge pointing at the centre of the turntable."
+            return "Make sure your iPhone's camera is facing the front of the cart."
         case .countdown:
-            return experiment.measuresAngle ? "Hold the cart still. Release it when the countdown ends and recording begins." : "Keep the turntable still. Spin it when the countdown ends and recording begins."
+            return "Hold the cart still. Release it when the countdown ends and recording begins."
         case .measuring:
-            return experiment.measuresAngle ? "Accelab is recording the motion of your cart as it travels down the track." : "Accelab is recording the spin of your turntable. Let it slow down, and tap Done once it has stopped."
+            return "Accelab is recording the motion of your cart as it travels down the track."
         case .completed:
             return "Your lab data is ready for analysis! It's saved in Past Runs."
         }

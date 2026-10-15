@@ -6,8 +6,8 @@
 import SwiftUI
 
 /// A short pause between tracking and the results, in which the run's curve draws itself: distance
-/// against time for a cart on a track, height against horizontal distance (the flight itself) for a
-/// projectile, or y against x (the circle being traced) for a marker going round.
+/// against time for a cart on a track, or height against horizontal distance (the flight itself) for a
+/// projectile.
 /// The numbers are ready at once; the pause is there so the result reads as worked out rather than abrupt.
 struct AnalyzeStepView: View {
     let data: RunData
@@ -84,47 +84,38 @@ struct AnalyzeStepView: View {
 
     private var verticalAxisLabel: String {
         switch data {
-        // A turntable run never reaches this camera-only step, so it is treated like a distance run.
-        case .distance, .rotation:
+        case .distance:
             return "Distance"
         case .position:
             return "Height"
-        case .circle:
-            return "y"
         }
     }
 
     private var horizontalAxisLabel: String {
         switch data {
-        case .distance, .rotation:
+        case .distance:
             return "Time"
         case .position:
             return "Distance"
-        case .circle:
-            return "x"
         }
     }
 
     private var graphDescription: String {
         switch data {
-        case .distance, .rotation:
+        case .distance:
             return "Graph of your run: distance against time"
         case .position:
             return "Graph of your run: height against horizontal distance"
-        case .circle:
-            return "Graph of your run: the circle the marker traced"
         }
     }
 
     /// What the pause claims to be doing; the second and third are the same for both kinds of run.
     private var phases: [String] {
         switch data {
-        case .distance, .rotation:
+        case .distance:
             return ["Fitting the track…", "Converting pixels to metres…", "Building your data…"]
         case .position:
             return ["Setting the origin…", "Converting pixels to metres…", "Building your data…"]
-        case .circle:
-            return ["Fitting the circle…", "Converting pixels to metres…", "Building your data…"]
         }
     }
 
@@ -139,12 +130,8 @@ struct AnalyzeStepView: View {
         switch data {
         case .distance(let splits):
             return distancePoints(for: splits)
-        case .rotation:
-            return []
         case .position(let splits):
-            return planePoints(x: splits.map(\.x), y: splits.map(\.y))
-        case .circle(let splits):
-            return planePoints(x: splits.map(\.x), y: splits.map(\.y))
+            return flightPoints(for: splits)
         }
     }
 
@@ -159,25 +146,28 @@ struct AnalyzeStepView: View {
         }
     }
 
-    /// The path itself (a projectile's flight, or the circle a marker traced), fitted inside the frame
-    /// with one scale on both axes so it keeps its true shape. The lowest x sits on the left edge and the
-    /// lowest y on the bottom edge. y is positive upwards in the data and can be negative (a projectile that
-    /// lands below where it started, the lower half of a circle), so it is measured from the lowest sample
-    /// and flipped for drawing.
-    private func planePoints(x xs: [Double], y ys: [Double]) -> [CGPoint] {
-        guard let minX = xs.min(), let maxX = xs.max(), let minY = ys.min(), let maxY = ys.max() else { return [] }
+    /// Height against horizontal distance, fitted inside the frame with one scale on both axes so the path
+    /// keeps its true shape. The lowest x sits on the left edge and the lowest y on the bottom edge. y is
+    /// positive upwards in the data and can be negative when the projectile lands below where it started, so it
+    /// is measured from the lowest sample and flipped for drawing.
+    private func flightPoints(for splits: [PositionSplit]) -> [CGPoint] {
+        guard let first = splits.first else { return [] }
 
         let size = Self.graphSize
+        let minX = splits.map(\.x).min() ?? first.x
+        let maxX = splits.map(\.x).max() ?? first.x
+        let minY = splits.map(\.y).min() ?? first.y
+        let maxY = splits.map(\.y).max() ?? first.y
         let spanX = CGFloat(maxX - minX)
         let spanY = CGFloat(maxY - minY)
 
-        // An axis with no range cannot limit the scale. With no range on either (one sample, or something
-        // that never moved) there is nothing to scale, so everything sits in the bottom-left corner.
+        // An axis with no range cannot limit the scale. With no range on either (one sample, or a projectile that
+        // never moved) there is nothing to scale, so everything sits in the bottom-left corner.
         let fittedScale = min(spanX > 0 ? size.width / spanX : .infinity, spanY > 0 ? size.height / spanY : .infinity)
         let scale = fittedScale.isFinite ? fittedScale : 0
 
-        return zip(xs, ys).map { x, y in
-            CGPoint(x: CGFloat(x - minX) * scale, y: size.height - CGFloat(y - minY) * scale)
+        return splits.map { split in
+            CGPoint(x: CGFloat(split.x - minX) * scale, y: size.height - CGFloat(split.y - minY) * scale)
         }
     }
 }

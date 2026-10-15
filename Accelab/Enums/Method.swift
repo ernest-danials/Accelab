@@ -43,9 +43,9 @@ enum Method: String, CaseIterable, Identifiable {
     var description: String {
         switch self {
         case .camera:
-            return "Film a cart, a projectile or a marker going round, and track its motion from the video."
+            return "Film a cart, or an object in flight, and track its motion from the video."
         case .sensor:
-            return "Attach your iPhone to the cart, or lay it on a turntable, and measure its motion with the built-in sensors."
+            return "Attach your iPhone to the cart and measure its motion with the built-in sensors."
         }
     }
 }

@@ -11,14 +11,11 @@ import SwiftData
 struct SensorMethodView: View {
     @Environment(AngleManager.self) private var angleManager: AngleManager
     @Environment(MotionMeasuringManager.self) private var measuringManager: MotionMeasuringManager
-    @Environment(RotationMeasuringManager.self) private var rotationManager: RotationMeasuringManager
     @Environment(MethodManager.self) private var methodManager: MethodManager
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
 
     @State private var currentStep: SensorMethodStep = .idle
-    /// What is being measured. Chosen on the start screen and kept across runs.
-    @State private var experiment: SensorExperiment = .airTrack
 
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
 
@@ -34,11 +31,11 @@ struct SensorMethodView: View {
 
     var body: some View {
         ZStack {
-            StepTitleView(title: currentStep.title(for: experiment), subtitle: currentStep.subtitle(for: experiment), description: currentStep.description(for: experiment), isProminent: currentStep == .idle)
+            StepTitleView(title: currentStep.title, subtitle: currentStep.subtitle, description: currentStep.description, isProminent: currentStep == .idle)
 
             switch currentStep {
             case .idle:
-                IdleStepView(experiment: $experiment, onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: experiment.measuresAngle ? .chooseAngle : .standby) })
+                IdleStepView(onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: .chooseAngle) })
             case .chooseAngle:
                 ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: {
                     self.isAngleSkipped = false
@@ -57,20 +54,13 @@ struct SensorMethodView: View {
                     changeCurrentStep(to: .standby)
                 })
             case .standby:
-                StandbyStepView(experiment: experiment, currentDeviceOrientation: currentDeviceOrientation, onBegin: startCountdown, onBack: {
-                    if !experiment.measuresAngle {
-                        resetRun()
-                        changeCurrentStep(to: .idle)
-                    } else {
-                        changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle)
-                    }
-                })
+                StandbyStepView(currentDeviceOrientation: currentDeviceOrientation, onBegin: { changeCurrentStep(to: .countdown) }, onBack: { changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle) })
             case .countdown:
-                CountdownStepView(onCancel: cancelCountdown, onFinished: startMeasuring)
+                CountdownStepView(onCancel: { changeCurrentStep(to: .standby) }, onFinished: startMeasuring)
             case .measuring:
-                MeasuringStepView(data: currentData, onDiscard: discardMeasuring, onDone: finishMeasuring)
+                MeasuringStepView(splits: measuringManager.splits, onDiscard: discardMeasuring, onDone: finishMeasuring)
             case .completed:
-                CompletedStepView(desiredAngle: summaryDesiredAngle, capturedAngle: capturedAngle, data: currentData, csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
+                CompletedStepView(desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, data: .distance(measuringManager.splits), csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
             }
         }
         // Check the step first so the body only observes `currentAngle` while determining the angle.
@@ -86,9 +76,9 @@ struct SensorMethodView: View {
             // integrating across the gap when the app returns.
             switch currentStep {
             case .countdown:
-                cancelCountdown()
+                changeCurrentStep(to: .standby)
             case .measuring:
-                if currentData.isEmpty {
+                if measuringManager.splits.isEmpty {
                     discardMeasuring()
                 } else {
                     finishMeasuring()
@@ -120,50 +110,15 @@ struct SensorMethodView: View {
     }
 
     // MARK: - Run lifecycle
-    // The only places that talk to the measurement sources.
-
-    /// The samples of the run so far, from whichever manager measures this experiment.
-    private var currentData: RunData {
-        switch experiment {
-        case .airTrack:
-            return .distance(measuringManager.splits)
-        case .circularMotion:
-            return .rotation(rotationManager.splits)
-        }
-    }
-
-    /// The angle the summary shows. `nil` when the angle steps were skipped, and for a turntable, which has none.
-    private var summaryDesiredAngle: Double? {
-        experiment.measuresAngle && !isAngleSkipped ? desiredAngle : nil
-    }
-
-    /// For a turntable the sensors are read through the countdown, while it still stands, to learn what
-    /// the accelerometer says at rest.
-    private func startCountdown() {
-        if experiment == .circularMotion {
-            rotationManager.start()
-        }
-        changeCurrentStep(to: .countdown)
-    }
-
-    private func cancelCountdown() {
-        rotationManager.reset()
-        changeCurrentStep(to: .standby)
-    }
+    // The only places that talk to the measurement source.
 
     private func startMeasuring() {
-        switch experiment {
-        case .airTrack:
-            measuringManager.start()
-        case .circularMotion:
-            rotationManager.beginRecording()
-        }
+        measuringManager.start()
         changeCurrentStep(to: .measuring)
     }
 
     private func finishMeasuring() {
         measuringManager.stop()
-        rotationManager.stop()
         changeCurrentStep(to: .completed)
         exportCSV()
         saveRun()
@@ -171,13 +126,13 @@ struct SensorMethodView: View {
 
     /// Keeps the finished run in the past runs. It stays there after `resetRun()`.
     private func saveRun() {
-        let data = currentData
-        guard !data.isEmpty else { return }
+        let splits = measuringManager.splits
+        guard !splits.isEmpty else { return }
 
         if let savedRun {
-            savedRun.update(data: data)
+            savedRun.update(data: .distance(splits))
         } else {
-            let run = SavedRun(method: .sensor, sensorExperiment: experiment, desiredAngle: summaryDesiredAngle, capturedAngle: capturedAngle, data: data)
+            let run = SavedRun(method: .sensor, desiredAngle: isAngleSkipped ? nil : desiredAngle, capturedAngle: capturedAngle, data: .distance(splits))
             modelContext.insert(run)
             self.savedRun = run
         }
@@ -186,14 +141,12 @@ struct SensorMethodView: View {
     /// Throws away the collected data but keeps the angle, so the run can be repeated.
     private func discardMeasuring() {
         measuringManager.reset()
-        rotationManager.reset()
         changeCurrentStep(to: .standby)
     }
 
     /// Clears everything belonging to the current run: collected data, angles, and exported files.
     private func resetRun() {
         measuringManager.reset()
-        rotationManager.reset()
         self.savedRun = nil
         self.desiredAngle = ChooseAngleStepView.defaultAngle
         self.capturedAngle = nil
@@ -204,9 +157,8 @@ struct SensorMethodView: View {
     }
 
     private func exportCSV() {
-        let data = currentData
-        self.csvURL = CSVExporter.writeTempFile(for: data)
-        self.desmosURL = CSVExporter.writeDesmosTempFile(for: data)
+        self.csvURL = CSVExporter.writeTempFile(for: .distance(measuringManager.splits))
+        self.desmosURL = CSVExporter.writeDesmosTempFile(for: .distance(measuringManager.splits))
     }
 
     /// The angle can't be read while the phone is lying flat.
@@ -223,7 +175,6 @@ struct SensorMethodView: View {
     SensorMethodView()
         .environment(AngleManager())
         .environment(MotionMeasuringManager())
-        .environment(RotationMeasuringManager())
         .environment(MethodManager())
         .modelContainer(for: SavedRun.self, inMemory: true)
 }
