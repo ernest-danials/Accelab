@@ -110,22 +110,26 @@ final class SavedRun {
         sensorExperiment == .circularMotion
     }
 
+    /// The experiment the run was, whichever method it was done with. A run saved before there was a
+    /// choice was a cart on a track, so it counts as that.
+    var lab: Experiment {
+        experimentRawValue.flatMap(Experiment.init(rawValue:)) ?? .airTrack
+    }
+
     /// The name the user gave the run, or the one it has until then.
     var title: String {
         name ?? defaultTitle
     }
 
-    /// A name made from the run's method. What a camera run filmed is not part of it: that is a choice
-    /// inside the method, shown beside the name in `caption`, where renaming the run leaves it in place.
+    /// The experiment's name: runs are told apart by what they measured first, and the method second.
     var defaultTitle: String {
-        "\(method.rawValue) Run"
+        lab.rawValue
     }
 
-    /// What goes under the run's name: what the run measured, then when the run was made.
+    /// What goes under the run's name: the method it was done with, then when the run was made. Kept here
+    /// rather than in the name, so renaming the run leaves it in place.
     var caption: String {
-        let dateText = date.formatted(date: .abbreviated, time: .shortened)
-        guard let experimentName = experiment?.rawValue ?? sensorExperiment?.rawValue else { return dateText }
-        return "\(experimentName) · \(dateText)"
+        "\(method.rawValue) · \(date.formatted(date: .abbreviated, time: .shortened))"
     }
 
     /// Rebuilds the samples. Each call gives them new ids, so keep the result rather than calling this from a view's body.

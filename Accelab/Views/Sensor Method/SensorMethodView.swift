@@ -75,6 +75,18 @@ struct SensorMethodView: View {
             case .completed:
                 CompletedStepView(desiredAngle: summaryDesiredAngle, capturedAngle: capturedAngle, data: currentData, csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: leaveMethod)
             }
+
+            // The phone rides on the cart or the turntable either way round, and with Orientation Lock on the
+            // screen can't turn to follow it. There is no way to read the setting, so this is always shown, on
+            // the first step, before the phone is put in place. Top-trailing, where no step has anything.
+            if currentStep == SensorMethodStep.firstStep(for: experiment) {
+                GlassStatusLabel {
+                    Label("Turn off Orientation Lock", systemImage: "lock.rotation")
+                }
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .top)
+                .padding()
+            }
         }
         // Check the step first so the body only observes `currentAngle` while determining the angle.
         .background((currentStep == .determineAngle && isAngleReadyToCapture) ? .green3.opacity(0.5) : .clear)

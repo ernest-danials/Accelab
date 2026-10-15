@@ -54,12 +54,11 @@ struct PastRunsView: View {
 
     private func row(for run: SavedRun) -> some View {
         HStack(spacing: 12) {
-            // The method's own symbol and colour, so the list reads as two methods. What a camera run
-            // filmed is in the caption.
-            Image(systemName: run.method.imageName)
+            // The experiment's symbol, so the list reads as the labs done. The method is in the caption.
+            Image(systemName: run.lab.imageName)
                 .customFont(.title3, weight: .medium)
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(run.method.color)
+                .foregroundStyle(.accent)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {

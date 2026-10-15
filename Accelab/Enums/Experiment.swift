@@ -61,6 +61,18 @@ enum Experiment: String, CaseIterable, Identifiable {
         }
     }
 
+    /// The experiment's symbol, which leads a saved run's row in Past Runs.
+    var imageName: String {
+        switch self {
+        case .airTrack:
+            return "angle"
+        case .projectile:
+            return "point.topleft.down.to.point.bottomright.curvepath"
+        case .circularMotion:
+            return "arrow.clockwise.circle"
+        }
+    }
+
     /// The name used in links (`accelab://circular-motion`).
     var slug: String {
         rawValue.lowercased().replacingOccurrences(of: " ", with: "-")
@@ -128,18 +140,39 @@ enum Experiment: String, CaseIterable, Identifiable {
     }
 
     /// The graph the data is for, and what it gives. `nil` where the method can't do the experiment.
-    func graph(for method: Method) -> String? {
+    func graph(for method: Method) -> ExperimentGraph? {
         switch (self, method) {
         case (.airTrack, _):
-            return "Plot distance against time and fit d = ½at² for the acceleration."
+            return ExperimentGraph(y: "d", x: "t", shape: .parabola, note: "Fit d = ½at² for the acceleration.")
         case (.projectile, .camera):
-            return "Plot y against x for the path, or each against time for the velocities and g."
+            return ExperimentGraph(y: "y", x: "t", shape: .flight, note: "Fit y = v₀t − ½gt² for g.")
         case (.projectile, .sensor):
             return nil
         case (.circularMotion, .camera):
-            return "Plot θ against t: the gradient is ω, and the period is 2π/ω."
+            return ExperimentGraph(y: "θ", x: "t", shape: .line, note: "The gradient is ω, and the period is 2π/ω.")
         case (.circularMotion, .sensor):
-            return "Plot centripetal acceleration against ω²: the gradient is the radius."
+            return ExperimentGraph(y: "a", ySubscript: "c", x: "ω²", shape: .line, note: "The gradient is the radius.")
         }
     }
+}
+
+/// The graph students plot from a method's data, as shown on the screen where a method is chosen: y against x,
+/// the shape the points should make, and what the graph gives.
+struct ExperimentGraph {
+    /// The shape the points should make.
+    enum Shape {
+        /// Starting flat and curving up, as distance does under a constant acceleration.
+        case parabola
+        /// Rising and falling, as a projectile's height does over the time of its flight.
+        case flight
+        /// Straight, through the origin.
+        case line
+    }
+
+    let y: String
+    /// Written small and lowered after `y`, as the c of a꜀.
+    var ySubscript: String? = nil
+    let x: String
+    let shape: Shape
+    let note: String
 }

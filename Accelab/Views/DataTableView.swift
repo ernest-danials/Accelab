@@ -19,7 +19,7 @@ struct DataTableView: View {
         self.rows = CSVExporter.rows(for: data)
     }
 
-    /// The columns' headings, written for reading. Also what the screen where a method is chosen lists as the data it gives.
+    /// The columns' headings, written for reading. Also what VoiceOver reads for the columns on the screen where a method is chosen.
     static func columnHeadings(for data: RunData) -> [String] {
         switch data {
         case .distance:
