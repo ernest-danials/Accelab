@@ -1,19 +1,22 @@
 //
-//  CameraIdleStepView.swift
+//  ExperimentDrawing.swift
 //  Accelab
 //
 
 import SwiftUI
 
-struct CameraIdleStepView: View {
-    /// What is going to be filmed. Chosen here, before the run starts, because it decides the steps.
-    @Binding var experiment: CameraExperiment
-    let onChangeMethod: () -> Void
-    let onStart: () -> Void
+/// The home screen's drawing of the chosen experiment: a cart on its tilted track, a projectile on the
+/// dotted arc of its flight, or a marker on the dotted ring of its circle, seen from above. One line and one
+/// circle for all three, so choosing another experiment turns one into the other: the track breaks up into
+/// the dots of the flight, which close into the ring, and the cart slides over to become the projectile or
+/// the marker. Animate the change with `changeAnimation`.
+struct ExperimentDrawing: View {
+    let experiment: Experiment
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Slower than a button's, so that the track can be seen breaking up into the dots.
+    static let changeAnimation: Animation = .smooth(duration: 0.7)
 
-    // The cart on its tilted track, drawn to the same measurements as the sensor method's idle screen.
+    // The cart on its tilted track.
     private static let slope: Angle = .degrees(-20)
     private static let cartSize: CGFloat = 90
     private static let trackSpacing: CGFloat = 30
@@ -28,76 +31,23 @@ struct CameraIdleStepView: View {
     // The marker on the ring of its circle, seen from above, drawn in the same manner again.
     private static let ringSize: CGFloat = 170
     private static let markerSize: CGFloat = 28
-    /// Where the middle of the ring is, from the centre of the screen: a little below it, out from under
-    /// the title, as the sensor method's turntable is.
+    /// Where the middle of the ring is, from the centre of the screen: a little below it, out from under the title.
     private static let ringCenterOffset = CGSize(width: 0, height: 14)
     /// Where on the ring the marker is: up and to the right, where the cart and the projectile were.
     private static let markerAngle: Angle = .degrees(-60)
 
-    private static let cameraSize: CGFloat = 84
-    private static let cameraCornerRadius: CGFloat = 24
-    /// How far the camera sits from the middle of the cart, so that it overlaps the cart's edge
-    /// without reaching the track.
-    private static let cartCameraShift = CGSize(width: 46, height: 6)
-    /// How far the camera sits from the middle of the projectile: below it, where it overlaps its edge
-    /// and stays clear of the arc.
-    private static let projectileCameraShift = CGSize(width: 8, height: 52)
-
-    /// Slower than a button's, so that the track can be seen breaking up into the dots.
-    private static let changeAnimation: Animation = .smooth(duration: 0.7)
-
     var body: some View {
         ZStack {
-            // One line and one circle for all three drawings, so choosing another experiment turns one into
-            // the other: the track breaks up into the dots of the flight, which close into the ring of the
-            // circle, and the cart slides over to become the projectile or the marker, as the camera slides with it.
-            Group {
-                TrackOrFlight(flight: experiment == .airTrack ? 0 : 1, circle: experiment == .circularMotion ? 1 : 0, slope: Self.slope, trackCenterOffset: Self.trackCenterOffset, thickness: Self.trackThickness, arcSize: Self.arcSize, ringSize: Self.ringSize, ringCenterOffset: Self.ringCenterOffset)
-                    .stroke(style: StrokeStyle(lineWidth: Self.trackThickness, lineCap: .round, lineJoin: .round))
+            TrackOrFlight(flight: experiment == .airTrack ? 0 : 1, circle: experiment == .circularMotion ? 1 : 0, slope: Self.slope, trackCenterOffset: Self.trackCenterOffset, thickness: Self.trackThickness, arcSize: Self.arcSize, ringSize: Self.ringSize, ringCenterOffset: Self.ringCenterOffset)
+                .stroke(style: StrokeStyle(lineWidth: Self.trackThickness, lineCap: .round, lineJoin: .round))
 
-                // Left plain: here the phone watches the cart instead of riding on it.
-                Circle()
-                    .frame(width: circleSize, height: circleSize)
-                    .offset(circleOffset)
-            }
-            .foregroundStyle(Method.camera.color.gradient)
-
-            // The camera, looking at what it films from beside it, or from above the middle of the circle.
-            // Positioned rather than tilted along with the track, because glass loses its shape when it is rotated.
-            Image(systemName: Method.camera.imageName)
-                .customFont(.largeTitle, weight: .medium)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.primary)
-                .frame(width: Self.cameraSize, height: Self.cameraSize)
-                .glassEffect(.regular, in: .rect(cornerRadius: Self.cameraCornerRadius))
-                .offset(cameraOffset)
-
-            GlassIconButton(systemImage: "chevron.backward", label: "Change Method", perform: onChangeMethod)
-                .alignView(to: .leading)
-                .alignViewVertically(to: .bottom)
-                .padding()
-
-            // In the row of the buttons, so choosing adds nothing to the screen's height. A segmented
-            // control rather than more buttons: it is one setting with three values. Wide enough for its
-            // three names at this size, and still clear of Back and Start on the smallest screen.
-            Picker("What to film", selection: $experiment.animation(reduceMotion ? nil : Self.changeAnimation)) {
-                ForEach(CameraExperiment.allCases) { experiment in
-                    Text(experiment.rawValue)
-                        .tag(experiment)
-                }
-            }
-            .pickerStyle(.segmented)
-            .controlSize(.large)
-            .frame(width: 390, height: GlassIconButton.height)
-            .sensoryFeedback(.selection, trigger: experiment)
-            .alignViewVertically(to: .bottom)
-            .padding()
-
-            GlassIconButton(systemImage: "play.fill", title: "Start", label: "Start", style: .prominent, perform: onStart)
-                .alignView(to: .trailing)
-                .alignViewVertically(to: .bottom)
-                .padding()
+            Circle()
+                .frame(width: circleSize, height: circleSize)
+                .offset(circleOffset)
         }
+        // The camera method's colour, which the drawing had when it was that method's start screen.
+        .foregroundStyle(Color.green1.gradient)
+        .accessibilityHidden(true)
     }
 
     private var circleSize: CGFloat {
@@ -119,18 +69,6 @@ struct CameraIdleStepView: View {
             return Self.projectileOffset
         case .circularMotion:
             return Self.markerOffset
-        }
-    }
-
-    private var cameraOffset: CGSize {
-        switch experiment {
-        case .airTrack:
-            return CGSize(width: Self.cartCenterOffset.width + Self.cartCameraShift.width, height: Self.cartCenterOffset.height + Self.cartCameraShift.height)
-        case .projectile:
-            return CGSize(width: Self.projectileOffset.width + Self.projectileCameraShift.width, height: Self.projectileOffset.height + Self.projectileCameraShift.height)
-        case .circularMotion:
-            // Above the middle of the circle, looking down at it.
-            return Self.ringCenterOffset
         }
     }
 
@@ -161,7 +99,7 @@ struct CameraIdleStepView: View {
     }
 }
 
-/// The line of the start screen's drawing: the tilted track at `flight` 0, the dotted arc of a projectile
+/// The line of the home screen's drawing: the tilted track at `flight` 0, the dotted arc of a projectile
 /// at `flight` 1, the dotted ring of a circle at `circle` 1, and one turning into another in between. The
 /// track is cut into as many pieces as the arc has dots. Each piece shrinks to a dot, the ones at the
 /// launch first, while the whole line bends from the track into the arc; the arc's two ends then come
@@ -241,8 +179,8 @@ private struct TrackOrFlight: Shape {
 
     /// The point at `progress` along the line, from 0 at its left end to 1 at its right.
     private func point(at progress: CGFloat, flight: CGFloat, circle: CGFloat, in rect: CGRect) -> CGPoint {
-        // The track is as long as the frame is wide, like the sensor method's. Its round ends add half
-        // its thickness each, so the line down its middle is shorter by that much.
+        // The track is as long as the frame is wide. Its round ends add half its thickness each, so the
+        // line down its middle is shorter by that much.
         let trackLength = rect.width - thickness
         let along = (progress - 0.5) * trackLength
         let onTrack = CGPoint(x: trackCenterOffset.width + along * cos(slope.radians), y: trackCenterOffset.height + along * sin(slope.radians))

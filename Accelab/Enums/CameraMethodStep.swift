@@ -10,7 +10,7 @@ import Foundation
 /// instead and a circle filmed from above has nothing to set, so the numbering and the wording follow what
 /// is being filmed.
 enum CameraMethodStep: CaseIterable, Identifiable {
-    case idle, chooseAngle, determineAngle, setup, level, record, trim, calibrate, track, analyze, completed
+    case chooseAngle, determineAngle, setup, level, record, trim, calibrate, track, analyze, completed
 
     var id: Self { self }
 
@@ -19,7 +19,8 @@ enum CameraMethodStep: CaseIterable, Identifiable {
         [.setup, .record, .trim, .calibrate, .track].contains(self)
     }
 
-    /// The steps that are numbered for the user, in the order this experiment goes through them.
+    /// The steps that are numbered for the user, in the order this experiment goes through them. A run
+    /// starts at the first.
     static func numberedSteps(for experiment: CameraExperiment) -> [CameraMethodStep] {
         let videoSteps: [CameraMethodStep] = [.record, .trim, .calibrate, .track]
         if experiment.measuresAngle {
@@ -33,8 +34,6 @@ enum CameraMethodStep: CaseIterable, Identifiable {
 
     func title(for experiment: CameraExperiment) -> String {
         switch self {
-        case .idle:
-            return Method.camera.rawValue
         case .chooseAngle:
             return "Choose the Angle"
         case .determineAngle:
@@ -73,8 +72,6 @@ enum CameraMethodStep: CaseIterable, Identifiable {
 
     func description(for experiment: CameraExperiment) -> String {
         switch self {
-        case .idle:
-            return experiment.description
         case .chooseAngle:
             return "Choose the desired slope of your track."
         case .determineAngle:

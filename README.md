@@ -1,23 +1,26 @@
 # Accelab
-Accelab is an educational iPhone application developed using SwiftUI. It aims to help students collect distance-time data of a cart on an air track lab, either by filming the cart or by attaching the iPhone to it. The same camera method can also follow a projectile and give its position over time.
+Accelab is an educational iPhone application developed using SwiftUI. It helps students collect the data for three physics labs: a cart on an air track, a projectile, and circular motion. Choose the experiment first, then how to measure it: by filming it, or with the iPhone's own sensors.
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ernest-danials/Accelab)
 
 ## Methods
-- **Camera (recommended):** film the cart with your iPhone, or choose a video you already have. Trim the clip, mark any known length in the shot for scale, then let Accelab track the cart automatically or mark it by hand.
-  - **Air Track** follows a cart along its track and gives distance against time.
-  - **Projectile** follows an object in flight and gives its x and y position, measured from where it started, against time. There is no angle to set; Accelab helps you level the iPhone instead.
-- **Sensor:** attach your iPhone to the cart and measure its motion with the built-in sensors.
+- **Camera:** film the motion with your iPhone, or choose a video you already have. Trim the clip, mark any known length in the shot for scale, then let Accelab track it automatically or mark it by hand.
+- **Sensor:** put your iPhone on the thing that moves and measure its motion with the built-in sensors.
+
+## Experiments
+| Experiment | Camera | Sensor |
+|---|---|---|
+| **Air Track** | Distance along the track against time (recommended). | Distance along the track against time, with the iPhone riding the cart. |
+| **Projectile** | x and y from where it started against time. There is no angle to set; Accelab helps you level the iPhone instead. | Not available. |
+| **Circular Motion** | A marker's x, y, angle and radius about the centre of its circle against time, filmed from above. Plot the angle against time for ω. | A turntable's angular velocity, ω², and centripetal and tangential acceleration against time, with the iPhone lying on it. Plot centripetal acceleration against ω² for the radius. |
 
 ## Features
-- Choose a target angle of the track.
-- Measure the actual angle so that it matches the target angle.
-- Collect distance-time data of a cart with the Camera or Sensor method.
-- Collect the x and y position of a projectile against time with the Camera method's Projectile choice.
+- Choose a target angle of the track, and measure the actual angle so that it matches.
 - Check the tracked points on the video and correct any of them by hand.
 - Preview the data as a table, export it as CSV, or copy it for Desmos.
 - Save the video of a filmed run and a photo with every tracked point marked on it.
 - Come back to finished runs later in Past Runs.
+- Open an experiment, or one of its methods, from a link: `accelab://circular-motion`, `accelab://circular-motion/sensor`.
 
 ## Websites
 - [Project Website](https://myungjoon.com/accelab)

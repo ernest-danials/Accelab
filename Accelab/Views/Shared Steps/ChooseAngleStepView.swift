@@ -64,7 +64,7 @@ struct ChooseAngleStepView: View {
                             self.isShowingConfirmationDialogToGoBack = true
                         }
                     }
-                    .confirmationDialog("This will reset the angle you chose and take you back to the home screen. Are you sure?", isPresented: $isShowingConfirmationDialogToGoBack, titleVisibility: .visible) {
+                    .confirmationDialog("This will reset the angle you chose and take you back to choosing a method. Are you sure?", isPresented: $isShowingConfirmationDialogToGoBack, titleVisibility: .visible) {
                         Button("Yes, reset and go back", role: .destructive, action: onCancel)
                     }
 

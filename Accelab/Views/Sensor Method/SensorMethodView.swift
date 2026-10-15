@@ -16,9 +16,10 @@ struct SensorMethodView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
 
-    @State private var currentStep: SensorMethodStep = .idle
-    /// What is being measured. Chosen on the start screen and kept across runs.
-    @State private var experiment: SensorExperiment = .airTrack
+    /// What is being measured, chosen before the method.
+    let experiment: SensorExperiment
+
+    @State private var currentStep: SensorMethodStep
 
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
 
@@ -32,15 +33,18 @@ struct SensorMethodView: View {
     /// The current run in the past runs, once it has finished.
     @State private var savedRun: SavedRun? = nil
 
+    init(experiment: SensorExperiment) {
+        self.experiment = experiment
+        self._currentStep = State(initialValue: SensorMethodStep.firstStep(for: experiment))
+    }
+
     var body: some View {
         ZStack {
-            StepTitleView(title: currentStep.title(for: experiment), subtitle: currentStep.subtitle(for: experiment), description: currentStep.description(for: experiment), isProminent: currentStep == .idle)
+            StepTitleView(title: currentStep.title(for: experiment), subtitle: currentStep.subtitle(for: experiment), description: currentStep.description(for: experiment), isProminent: false)
 
             switch currentStep {
-            case .idle:
-                IdleStepView(experiment: $experiment, onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: experiment.measuresAngle ? .chooseAngle : .standby) })
             case .chooseAngle:
-                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: {
+                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: leaveMethod, onContinue: {
                     self.isAngleSkipped = false
                     changeCurrentStep(to: .determineAngle)
                 }, onSkip: {
@@ -59,8 +63,7 @@ struct SensorMethodView: View {
             case .standby:
                 StandbyStepView(experiment: experiment, currentDeviceOrientation: currentDeviceOrientation, onBegin: startCountdown, onBack: {
                     if !experiment.measuresAngle {
-                        resetRun()
-                        changeCurrentStep(to: .idle)
+                        leaveMethod()
                     } else {
                         changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle)
                     }
@@ -70,11 +73,12 @@ struct SensorMethodView: View {
             case .measuring:
                 MeasuringStepView(data: currentData, onDiscard: discardMeasuring, onDone: finishMeasuring)
             case .completed:
-                CompletedStepView(desiredAngle: summaryDesiredAngle, capturedAngle: capturedAngle, data: currentData, csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
+                CompletedStepView(desiredAngle: summaryDesiredAngle, capturedAngle: capturedAngle, data: currentData, csvURL: csvURL, desmosURL: desmosURL, onRetryExport: exportCSV, onExit: leaveMethod)
             }
         }
         // Check the step first so the body only observes `currentAngle` while determining the angle.
         .background((currentStep == .determineAngle && isAngleReadyToCapture) ? .green3.opacity(0.5) : .clear)
+        .onAppear(perform: updateForCurrentStep)
         .onDeviceRotation { newOrientation in
             guard newOrientation.isLandscape else { return }
             withAnimation { self.currentDeviceOrientation = newOrientation }
@@ -104,10 +108,23 @@ struct SensorMethodView: View {
             self.currentStep = step
         }
 
+        updateForCurrentStep()
+    }
+
+    /// Starts and stops what the current step needs: on each change of step, and for the first one.
+    private func updateForCurrentStep() {
         updateAngleUpdates()
 
         // Keep the screen awake while the phone is on the track, where nobody touches it.
-        UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .standby, .countdown, .measuring].contains(step)
+        UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .standby, .countdown, .measuring].contains(currentStep)
+    }
+
+    /// Ends the run and goes back to choosing a method.
+    private func leaveMethod() {
+        resetRun()
+        angleManager.stop()
+        UIApplication.shared.isIdleTimerDisabled = false
+        methodManager.show(.methods)
     }
 
     /// Runs angle updates only while determining the angle.
@@ -220,7 +237,7 @@ struct SensorMethodView: View {
 }
 
 #Preview {
-    SensorMethodView()
+    SensorMethodView(experiment: .airTrack)
         .environment(AngleManager())
         .environment(MotionMeasuringManager())
         .environment(RotationMeasuringManager())

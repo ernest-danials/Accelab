@@ -33,14 +33,4 @@ enum SensorExperiment: String, CaseIterable, Identifiable {
             return "arrow.trianglehead.2.clockwise.rotate.90"
         }
     }
-
-    /// Shown under the method's name on its start screen, in place of the method's own description.
-    var description: String {
-        switch self {
-        case .airTrack:
-            return "Attach your iPhone to the cart and measure its motion with the built-in sensors."
-        case .circularMotion:
-            return "Lay your iPhone on a turntable and measure its spin and centripetal acceleration with the built-in sensors."
-        }
-    }
 }

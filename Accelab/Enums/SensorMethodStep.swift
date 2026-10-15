@@ -8,14 +8,17 @@
 import Foundation
 
 enum SensorMethodStep: CaseIterable, Identifiable {
-    case idle, chooseAngle, determineAngle, standby, countdown, measuring, completed
+    case chooseAngle, determineAngle, standby, countdown, measuring, completed
     
     var id: Self { self }
+
+    /// Where a run starts: setting the track's angle, or straight to placing the phone on a turntable.
+    static func firstStep(for experiment: SensorExperiment) -> SensorMethodStep {
+        experiment.measuresAngle ? .chooseAngle : .standby
+    }
     
     func title(for experiment: SensorExperiment) -> String {
         switch self {
-        case .idle:
-            return Method.sensor.rawValue
         case .chooseAngle:
             return "Choose the Angle"
         case .determineAngle:
@@ -34,8 +37,6 @@ enum SensorMethodStep: CaseIterable, Identifiable {
     /// "Step N". A turntable has no angle to set, so its steps start at the standby.
     func subtitle(for experiment: SensorExperiment) -> String {
         switch self {
-        case .idle:
-            return ""
         case .chooseAngle:
             return "Step 1"
         case .determineAngle:
@@ -53,8 +54,6 @@ enum SensorMethodStep: CaseIterable, Identifiable {
     
     func description(for experiment: SensorExperiment) -> String {
         switch self {
-        case .idle:
-            return experiment.description
         case .chooseAngle:
             return "Choose the desired slope of your track."
         case .determineAngle:

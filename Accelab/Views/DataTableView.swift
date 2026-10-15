@@ -15,17 +15,22 @@ struct DataTableView: View {
     @Environment(\.dismiss) private var dismiss
 
     init(data: RunData) {
+        self.headings = Self.columnHeadings(for: data)
+        self.rows = CSVExporter.rows(for: data)
+    }
+
+    /// The columns' headings, written for reading. Also what the screen where a method is chosen lists as the data it gives.
+    static func columnHeadings(for data: RunData) -> [String] {
         switch data {
         case .distance:
-            self.headings = ["Time (s)", "Distance (m)"]
+            return ["Time (s)", "Distance (m)"]
         case .position:
-            self.headings = ["Time (s)", "x (m)", "y (m)"]
+            return ["Time (s)", "x (m)", "y (m)"]
         case .rotation:
-            self.headings = ["Time (s)", "ω (rad/s)", "ω² (rad²/s²)", "Centripetal (m/s²)", "Tangential (m/s²)"]
+            return ["Time (s)", "ω (rad/s)", "ω² (rad²/s²)", "Centripetal (m/s²)", "Tangential (m/s²)"]
         case .circle:
-            self.headings = ["Time (s)", "x (m)", "y (m)", "θ (rad)", "Radius (m)"]
+            return ["Time (s)", "x (m)", "y (m)", "θ (rad)", "Radius (m)"]
         }
-        self.rows = CSVExporter.rows(for: data)
     }
 
     var body: some View {

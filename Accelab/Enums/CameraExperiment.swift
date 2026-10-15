@@ -50,18 +50,6 @@ enum CameraExperiment: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Shown under the method's name on its start screen, in place of the method's own description.
-    var description: String {
-        switch self {
-        case .airTrack:
-            return "Film the cart with your iPhone's camera and track its motion from the video."
-        case .projectile:
-            return "Film an object in flight and track its x and y position from the video."
-        case .circularMotion:
-            return "Film a marker going round from above and track its position and angle from the video."
-        }
-    }
-
     /// What is followed through the video, as it is named in the instructions.
     var subject: String {
         switch self {

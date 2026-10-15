@@ -19,15 +19,20 @@ struct AccelabApp: App {
     var body: some Scene {
         WindowGroup {
             Group {
-                if let currentMethod = methodManager.currentMethod {
-                    switch currentMethod {
-                    case .camera:
-                        CameraMethodView()
-                    case .sensor:
-                        SensorMethodView()
-                    }
-                } else {
+                switch methodManager.screen {
+                case .home:
+                    SelectExperimentView()
+                case .methods:
                     SelectMethodView()
+                case .method(.camera):
+                    CameraMethodView(experiment: methodManager.experiment.cameraExperiment)
+                case .method(.sensor):
+                    // Only opened for an experiment the sensors can do.
+                    if let experiment = methodManager.experiment.sensorExperiment {
+                        SensorMethodView(experiment: experiment)
+                    } else {
+                        SelectMethodView()
+                    }
                 }
             }
             .onOpenURL { url in
