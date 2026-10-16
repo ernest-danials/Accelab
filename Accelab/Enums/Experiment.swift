@@ -170,7 +170,7 @@ struct ExperimentGraph {
     }
 
     let y: String
-    /// Written small and lowered after `y`, as the c of a꜀.
+    /// Written small and lowered after `y`, as the c of the centripetal acceleration a_c.
     var ySubscript: String? = nil
     let x: String
     let shape: Shape

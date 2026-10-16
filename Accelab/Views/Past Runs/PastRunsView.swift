@@ -54,8 +54,8 @@ struct PastRunsView: View {
 
     private func row(for run: SavedRun) -> some View {
         HStack(spacing: 12) {
-            // The experiment's symbol, so the list reads as the labs done. The method is in the caption.
-            Image(systemName: run.lab.imageName)
+            // The symbol the run's own page opens with, so the list reads as the labs done. The method is in the caption.
+            Image(systemName: run.imageName)
                 .customFont(.title3, weight: .medium)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.accent)
@@ -68,38 +68,6 @@ struct PastRunsView: View {
                 Text(run.caption)
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Group {
-                    if run.isRotation {
-                        Text("\(run.peakAngularVelocity ?? 0, specifier: "%.2f") rad/s in \(run.duration, specifier: "%.2f") s")
-                    } else {
-                        Text("\(run.distance, specifier: "%.2f") m in \(run.duration, specifier: "%.2f") s")
-                    }
-                }
-                .customFont(.subheadline, weight: .medium)
-                .monospacedDigit()
-
-                Group {
-                    if run.isRotation {
-                        Text("Fastest spin")
-                    } else if run.isCircle {
-                        // The number above is the circle's radius, not a distance travelled.
-                        Text("Radius")
-                    } else if run.isProjectile {
-                        // So the number above isn't taken for the length of the path.
-                        Text("Horizontal distance")
-                    } else if let desiredAngle = run.desiredAngle {
-                        Text("\(desiredAngle, specifier: "%.2f")°")
-                    } else {
-                        Text("No angle")
-                    }
-                }
-                .customFont(.footnote)
-                .foregroundStyle(.secondary)
             }
         }
     }

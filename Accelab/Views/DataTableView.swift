@@ -6,7 +6,7 @@
 import SwiftUI
 
 /// A preview of the run's data as it is written to the CSV file: the same columns and the same digits,
-/// under headings written for reading.
+/// under headings written for reading. Only the columns chosen for export are shown.
 struct DataTableView: View {
     private let headings: [String]
     /// Every row as text, read once from the exporter rather than on each redraw.
@@ -14,9 +14,9 @@ struct DataTableView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    init(data: RunData) {
-        self.headings = Self.columnHeadings(for: data)
-        self.rows = CSVExporter.rows(for: data)
+    init(data: RunData, columns selection: Set<Int>? = nil) {
+        self.headings = CSVExporter.select(selection, from: Self.columnHeadings(for: data))
+        self.rows = CSVExporter.rows(for: data, including: selection)
     }
 
     /// The columns' headings, written for reading. Also what VoiceOver reads for the columns on the screen where a method is chosen.

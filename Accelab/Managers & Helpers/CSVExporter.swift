@@ -9,42 +9,55 @@ import Foundation
 enum CSVExporter {
     private static let filePrefix = "accelab-"
 
-    static func makeCSV(from data: RunData) -> String {
-        ([columns(for: data).joined(separator: ",")] + rows(for: data).map { $0.joined(separator: ",") }).joined(separator: "\n")
+    /// `columns` picks which columns go in, as indices into `columns(for:)`; `nil` is all of them.
+    /// They stay in their own order, whatever order they were chosen in.
+    static func makeCSV(from data: RunData, columns selection: Set<Int>? = nil) -> String {
+        ([columns(for: data, including: selection).joined(separator: ",")] + rows(for: data, including: selection).map { $0.joined(separator: ",") }).joined(separator: "\n")
     }
 
     /// The samples as rows of tab-separated numbers with no header, which is what Desmos turns into a
     /// table when pasted into an empty expression line. Desmos starts a new table every 1000 rows.
-    static func makeDesmosText(from data: RunData) -> String {
-        rows(for: data).map { $0.joined(separator: "\t") }.joined(separator: "\n")
+    static func makeDesmosText(from data: RunData, columns selection: Set<Int>? = nil) -> String {
+        rows(for: data, including: selection).map { $0.joined(separator: "\t") }.joined(separator: "\n")
     }
 
     /// The names in the file's header row, one for each column.
-    static func columns(for data: RunData) -> [String] {
+    static func columns(for data: RunData, including selection: Set<Int>? = nil) -> [String] {
+        let names: [String]
         switch data {
         case .distance:
-            return ["time_s", "distance_m"]
+            names = ["time_s", "distance_m"]
         case .position:
-            return ["time_s", "x_m", "y_m"]
+            names = ["time_s", "x_m", "y_m"]
         case .rotation:
-            return ["time_s", "angular_velocity_rad_s", "angular_velocity_squared_rad2_s2", "centripetal_acceleration_m_s2", "tangential_acceleration_m_s2"]
+            names = ["time_s", "angular_velocity_rad_s", "angular_velocity_squared_rad2_s2", "centripetal_acceleration_m_s2", "tangential_acceleration_m_s2"]
         case .circle:
-            return ["time_s", "x_m", "y_m", "angle_rad", "radius_m"]
+            names = ["time_s", "x_m", "y_m", "angle_rad", "radius_m"]
         }
+        return select(selection, from: names)
     }
 
     /// Every sample exactly as it is exported, so anything showing the data matches the file.
-    static func rows(for data: RunData) -> [[String]] {
+    static func rows(for data: RunData, including selection: Set<Int>? = nil) -> [[String]] {
+        let rows: [[String]]
         switch data {
         case .distance(let splits):
-            return splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.displacement)] }
+            rows = splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.displacement)] }
         case .position(let splits):
-            return splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y)] }
+            rows = splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y)] }
         case .rotation(let splits):
-            return splits.map { [timeText(for: $0.timeElapsed), valueText(for: $0.angularVelocity), valueText(for: $0.angularVelocity * $0.angularVelocity), valueText(for: $0.centripetalAcceleration), valueText(for: $0.tangentialAcceleration)] }
+            rows = splits.map { [timeText(for: $0.timeElapsed), valueText(for: $0.angularVelocity), valueText(for: $0.angularVelocity * $0.angularVelocity), valueText(for: $0.centripetalAcceleration), valueText(for: $0.tangentialAcceleration)] }
         case .circle(let splits):
-            return splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y), valueText(for: $0.angle), lengthText(for: $0.radius)] }
+            rows = splits.map { [timeText(for: $0.timeElapsed), lengthText(for: $0.x), lengthText(for: $0.y), valueText(for: $0.angle), lengthText(for: $0.radius)] }
         }
+        guard selection != nil else { return rows }
+        return rows.map { select(selection, from: $0) }
+    }
+
+    /// The cells at the chosen indices, in their own order. `nil` keeps them all.
+    nonisolated static func select<Cell>(_ selection: Set<Int>?, from cells: [Cell]) -> [Cell] {
+        guard let selection else { return cells }
+        return cells.indices.filter(selection.contains).map { cells[$0] }
     }
 
     private static func timeText(for seconds: TimeInterval) -> String {
@@ -75,13 +88,13 @@ enum CSVExporter {
     }
 
     /// Writes the samples to a fresh temp file, deleting earlier exports first. Returns `nil` if writing failed.
-    static func writeTempFile(for data: RunData) -> URL? {
+    static func writeTempFile(for data: RunData, columns selection: Set<Int>? = nil) -> URL? {
         removeTempFiles()
 
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(filePrefix)\(makeFileStamp()).csv")
 
         do {
-            try makeCSV(from: data).write(to: url, atomically: true, encoding: .utf8)
+            try makeCSV(from: data, columns: selection).write(to: url, atomically: true, encoding: .utf8)
             return url
         } catch {
             return nil
@@ -89,11 +102,11 @@ enum CSVExporter {
     }
 
     /// Writes the samples as a text file Desmos can import, next to the CSV. Returns `nil` if writing failed.
-    static func writeDesmosTempFile(for data: RunData) -> URL? {
+    static func writeDesmosTempFile(for data: RunData, columns selection: Set<Int>? = nil) -> URL? {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(filePrefix)desmos-\(makeFileStamp()).txt")
 
         do {
-            try makeDesmosText(from: data).write(to: url, atomically: true, encoding: .utf8)
+            try makeDesmosText(from: data, columns: selection).write(to: url, atomically: true, encoding: .utf8)
             return url
         } catch {
             return nil

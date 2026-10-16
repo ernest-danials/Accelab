@@ -80,10 +80,6 @@ struct SettingsView: View {
                 }
                 
                 Section {
-                    Link(destination: URL(string: "https://myungjoon.com/accelab/support")!) {
-                        Label("Need help?", systemImage: "lifepreserver.fill")
-                    }
-                    
                     Link(destination: URL(string: "https://myungjoon.com/accelab/privacy")!) {
                         Label("Privacy Policy", systemImage: "hand.raised.fill")
                     }

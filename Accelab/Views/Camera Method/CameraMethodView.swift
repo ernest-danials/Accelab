@@ -116,7 +116,7 @@ struct CameraMethodView: View {
             case .analyze:
                 AnalyzeStepView(data: data, onFinished: { changeCurrentStep(to: .completed) })
             case .completed:
-                CompletedStepView(desiredAngle: targetAngle, capturedAngle: capturedAngle, data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: true, videoURL: videoURL, photoURL: photoURL, onRetryExport: exportCSV, onExit: leaveMethod)
+                CompletedStepView(desiredAngle: targetAngle, capturedAngle: capturedAngle, data: data, csvURL: csvURL, desmosURL: desmosURL, videoURL: videoURL, photoURL: photoURL, onRetryExport: exportCSV, onExit: leaveMethod)
             }
         }
         // Check the step first so the body only observes `currentAngle` while the angle is on screen.

@@ -116,6 +116,18 @@ final class SavedRun {
         experimentRawValue.flatMap(Experiment.init(rawValue:)) ?? .airTrack
     }
 
+    /// The symbol `RunSummaryView` heads the run with, so the list and the run match: the angle for a run along
+    /// a track, and otherwise the method's own symbol for the experiment.
+    var imageName: String {
+        if let experiment, experiment != .airTrack {
+            return experiment.imageName
+        } else if let sensorExperiment, sensorExperiment != .airTrack {
+            return sensorExperiment.imageName
+        } else {
+            return "angle"
+        }
+    }
+
     /// The name the user gave the run, or the one it has until then.
     var title: String {
         name ?? defaultTitle

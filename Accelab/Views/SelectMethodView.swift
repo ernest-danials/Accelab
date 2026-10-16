@@ -145,7 +145,7 @@ private struct GraphBlock: View {
         .frame(height: Self.height)
     }
 
-    /// "a꜀ against ω²": the axes in the weight of the title, the word between them lighter.
+    /// "a_c against ω²": the axes in the weight of the title, the word between them lighter.
     private var title: Text {
         var y = Text(graph.y)
         if let ySubscript = graph.ySubscript {
@@ -263,7 +263,7 @@ private struct DataColumnsStrip: View {
         }
     }
 
-    /// A symbol with a subscript, such as a꜀ for the centripetal acceleration.
+    /// A symbol with a subscript, such as a_c for the centripetal acceleration.
     private func subscripted(_ symbol: String, _ index: String) -> Text {
         Text("\(Text(symbol))\(Text(index).font(.caption2.weight(.semibold)).baselineOffset(-3))")
     }
