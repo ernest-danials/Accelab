@@ -32,6 +32,8 @@ struct StepTitleView: View {
                 Text(subtitle)
                     .customFont(isProminent ? .title3 : .subheadline)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
             }
 
