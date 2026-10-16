@@ -22,7 +22,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("About") {
-                    Text("Accelab collects the data for three physics labs. Choose the experiment first: a cart on an air track, a projectile, or circular motion. Then choose how to measure it. The Camera method films the motion and tracks it from the video; the Sensor method puts your iPhone on the thing that moves and reads its built-in sensors. For the air track both give distance against time. A projectile can only be filmed, for its x and y against time. For circular motion the camera gives a marker's position and angle about the centre against time, and the sensors give a turntable's angular velocity and its centripetal and tangential acceleration. Export the data as CSV or for Desmos, and find your finished runs in Past Runs.")
+                    Text("Accelab is an educational app that helps students collect the data for three physics labs: a cart on an air track, filmed or with an iPhone riding on it; a projectile, filmed in flight; and circular motion, with a marker filmed from above or the iPhone lying flat on a turntable.")
                 }
                 
                 Section {
