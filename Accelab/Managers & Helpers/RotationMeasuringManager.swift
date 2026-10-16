@@ -13,9 +13,11 @@ import CoreMotion
 /// over short bins.
 ///
 /// It runs in two stages. `start()` begins reading while the turntable still stands, to learn what the
-/// accelerometer says at rest (its own offset, a few hundredths of a g on some phones); `beginRecording()`
-/// then takes that as the bias and starts collecting samples. A turntable that isn't level is not
-/// corrected for: its leak of gravity turns with the phone and averages out over whole turns.
+/// sensors say at rest (the accelerometer's own offset, a few hundredths of a g on some phones);
+/// `beginRecording()` then takes that as the bias and starts collecting samples. The splits that appear
+/// while recording have only that rest bias taken off; `stop()` remakes them all from the kept readings
+/// with the gravity leak of a turntable that isn't level fitted and taken off too (see
+/// `RotationSampling`), which needs the whole recording. Read `splits` after `stop()` for the run's data.
 @Observable
 final class RotationMeasuringManager {
     private(set) var splits: [RotationSplit] = []
@@ -33,15 +35,22 @@ final class RotationMeasuringManager {
 
     // Readings taken while the turntable stands still, before recording.
     private var restReadings: [RotationSampling.Reading] = []
+    // Every reading since `beginRecording()`, for the final splits; and the live binner for the ones shown meanwhile.
+    private var recordedReadings: [RotationSampling.Reading] = []
     private var binner: RotationSampling.Binner? = nil
+    /// The gravity leak fitted to the last recording, in g, or `nil` when the phone didn't turn enough to
+    /// fit one (or no recording has finished). Its `amplitude` is g·sin(tilt): how level the table was.
+    private(set) var leak: RotationSampling.Leak? = nil
 
     // MARK: - Lifecycle
 
     func reset() {
-        stop()
+        stopSensors()
         splits.removeAll()
         restReadings.removeAll()
+        recordedReadings.removeAll()
         binner = nil
+        leak = nil
     }
 
     /// Starts reading the sensors, taking the phone to be at rest until `beginRecording()`.
@@ -62,6 +71,7 @@ final class RotationMeasuringManager {
             let reading = RotationSampling.Reading(timestamp: m.timestamp, rotationRateZ: m.rotationRate.z, accelerationX: m.userAcceleration.x + m.gravity.x, accelerationY: m.userAcceleration.y + m.gravity.y)
 
             if self.isRecording {
+                self.recordedReadings.append(reading)
                 if let split = self.binner?.add(reading) {
                     self.splits.append(split)
                 }
@@ -77,20 +87,33 @@ final class RotationMeasuringManager {
         start()
         let bias = RotationSampling.makeBias(from: restReadings)
         restReadings.removeAll()
+        recordedReadings.removeAll()
+        leak = nil
         // Timed from now rather than from the first reading, so t = 0 is when the countdown ended.
         binner = RotationSampling.Binner(startTime: ProcessInfo.processInfo.systemUptime, sampleHz: sampleHz, bias: bias)
         isRecording = true
     }
 
+    /// Stops the sensors and, if recording, replaces the live splits with the whole recording's, with the
+    /// tilt leak taken off.
     func stop() {
+        guard isRunning else { return }
+        let wasRecording = isRecording
+        stopSensors()
+
+        if wasRecording, let binner {
+            // The bin being filled when the run ended is kept: it says when the run ended.
+            let result = RotationSampling.makeSplits(from: recordedReadings, bias: binner.bias, startTime: binner.startTime, sampleHz: binner.sampleHz)
+            splits = result.splits
+            leak = result.leak
+            recordedReadings.removeAll()
+        }
+    }
+
+    private func stopSensors() {
         guard isRunning else { return }
         motionManager.stopDeviceMotionUpdates()
         isRunning = false
-
-        // The bin being filled when the run ended is kept: it says when the run ended.
-        if isRecording, let split = binner?.flush() {
-            splits.append(split)
-        }
         isRecording = false
     }
 }
