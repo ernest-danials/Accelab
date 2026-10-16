@@ -22,7 +22,7 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 Section("About") {
-                    Text("Accelab helps you run an air-track lab. Set the track to the angle you chose, then get the cart's distance–time data by filming the cart with the Camera method, or by strapping your iPhone to it with the Sensor method. The Camera method can also film an object in flight, as a projectile, and give you its x and y position against time. Export the data as CSV or for Desmos, and find your finished runs in Past Runs.")
+                    Text("Accelab helps you run an air-track lab. Set the track to the angle you chose, then get the cart's distance–time data by filming the cart with the Camera method, or by strapping your iPhone to it with the Sensor method. The Camera method can also film an object in flight, as a projectile, and give you its x and y position against time, or film a marker going round from above and give you its position and angle about the centre against time. The Sensor method can also measure circular motion: lay your iPhone on a turntable and get its angular velocity and centripetal acceleration against time. Export the data as CSV or for Desmos, and find your finished runs in Past Runs.")
                 }
                 
                 Section {
