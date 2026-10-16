@@ -22,13 +22,26 @@ struct PastRunDetailView: View {
     @State private var runBeingRenamed: SavedRun? = nil
     @State private var isShowingPhoto: Bool = false
     @State private var isShowingConfirmationDialogToDelete: Bool = false
+    @State private var isShowingDataTable: Bool = false
+    /// The columns chosen for export, which the table shows too. `nil` is all of them.
+    @State private var selectedColumns: Set<Int>? = nil
 
     init(run: SavedRun) {
         self.run = run
-        // Empty until the samples are loaded, but already the run's own kind, so the summary doesn't
-        // open on the other kind's layout. Asked of the run rather than of its samples: a list builds
+        // Empty until the samples are loaded, but already the run's own kind (a turntable's, a circle's, a
+        // projectile's or a cart's), so the summary doesn't open on another kind's layout. Asked of the run rather than of its samples: a list builds
         // this view for every row, which shouldn't load each run's arrays.
-        self._data = State(initialValue: run.isProjectile ? .position([]) : .distance([]))
+        let emptyData: RunData
+        if run.isRotation {
+            emptyData = .rotation([])
+        } else if run.isCircle {
+            emptyData = .circle([])
+        } else if run.isProjectile {
+            emptyData = .position([])
+        } else {
+            emptyData = .distance([])
+        }
+        self._data = State(initialValue: emptyData)
     }
 
     var body: some View {
@@ -38,7 +51,7 @@ struct PastRunDetailView: View {
                 .padding(.bottom, 40)
 
             GlassEffectContainer {
-                HStack {
+                HStack(alignment: .bottom) {
                     GlassIconButton(systemImage: "trash", label: "Delete Run") {
                         self.isShowingConfirmationDialogToDelete = true
                     }
@@ -49,7 +62,7 @@ struct PastRunDetailView: View {
 
                     Spacer()
 
-                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: run.method == .camera, photoURL: photoURL, onRetryExport: exportFiles)
+                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, selectedColumns: $selectedColumns, photoURL: photoURL, onRetryExport: exportFiles)
                 }
                 .alignViewVertically(to: .bottom)
                 .padding()
@@ -59,6 +72,10 @@ struct PastRunDetailView: View {
         .navigationSubtitle(run.caption)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Table", systemImage: "tablecells") { self.isShowingDataTable = true }
+            }
+
             if photo != nil {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Photo with Points", systemImage: "photo") { self.isShowingPhoto = true }
@@ -70,6 +87,9 @@ struct PastRunDetailView: View {
             }
         }
         .renameRunCover(for: $runBeingRenamed)
+        .fullScreenCover(isPresented: $isShowingDataTable) {
+            DataTableView(data: data, columns: selectedColumns)
+        }
         .fullScreenCover(isPresented: $isShowingPhoto) {
             if let photo {
                 RunPhotoView(photo: photo, photoURL: photoURL)

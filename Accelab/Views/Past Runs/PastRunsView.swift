@@ -54,12 +54,11 @@ struct PastRunsView: View {
 
     private func row(for run: SavedRun) -> some View {
         HStack(spacing: 12) {
-            // The method's own symbol and colour, so the list reads as two methods. What a camera run
-            // filmed is in the caption.
-            Image(systemName: run.method.imageName)
+            // The symbol the run's own page opens with, so the list reads as the labs done. The method is in the caption.
+            Image(systemName: run.imageName)
                 .customFont(.title3, weight: .medium)
                 .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(run.method.color)
+                .foregroundStyle(.accent)
                 .frame(width: 32)
 
             VStack(alignment: .leading, spacing: 2) {
@@ -69,27 +68,6 @@ struct PastRunsView: View {
                 Text(run.caption)
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("\(run.distance, specifier: "%.2f") m in \(run.duration, specifier: "%.2f") s")
-                    .customFont(.subheadline, weight: .medium)
-                    .monospacedDigit()
-
-                Group {
-                    if run.isProjectile {
-                        // So the number above isn't taken for the length of the path.
-                        Text("Horizontal distance")
-                    } else if let desiredAngle = run.desiredAngle {
-                        Text("\(desiredAngle, specifier: "%.2f")°")
-                    } else {
-                        Text("No angle")
-                    }
-                }
-                .customFont(.footnote)
-                .foregroundStyle(.secondary)
             }
         }
     }

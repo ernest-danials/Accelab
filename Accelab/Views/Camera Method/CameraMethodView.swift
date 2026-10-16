@@ -15,11 +15,13 @@ struct CameraMethodView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
 
-    @State private var currentStep: CameraMethodStep = .idle
-    /// What is being filmed, chosen on the idle step. A projectile runs the same steps as a cart on a track,
+    /// What is being filmed, chosen before the method. A projectile runs the same steps as a cart on a track,
     /// with one that levels the phone in place of the two that set the track's angle, and ends with x and y
-    /// against time rather than distance along the track. Kept across runs, so a class doing one lab doesn't choose again each time.
-    @State private var experiment: CameraExperiment = .airTrack
+    /// against time rather than distance along the track; a marker going round has neither, and ends with
+    /// x, y and angle about its circle's centre.
+    let experiment: CameraExperiment
+
+    @State private var currentStep: CameraMethodStep
 
     @State private var currentDeviceOrientation: UIDeviceOrientation? = nil
 
@@ -43,19 +45,21 @@ struct CameraMethodView: View {
     /// The current run in the past runs, once it has finished.
     @State private var savedRun: SavedRun? = nil
 
+    init(experiment: CameraExperiment) {
+        self.experiment = experiment
+        self._currentStep = State(initialValue: CameraMethodStep.numberedSteps(for: experiment)[0])
+    }
+
     var body: some View {
         ZStack {
             // The steps from setup to tracking lay themselves out around their own title.
             if !currentStep.drawsOwnTitle {
-                StepTitleView(title: currentStep.title(for: experiment), subtitle: currentStep.subtitle(for: experiment), description: currentStep.description(for: experiment), isProminent: currentStep == .idle)
+                StepTitleView(title: currentStep.title(for: experiment), subtitle: currentStep.subtitle(for: experiment), description: currentStep.description(for: experiment), isProminent: false)
             }
 
             switch currentStep {
-            case .idle:
-                // A projectile has no track to set the angle of, so it goes straight to the shot.
-                CameraIdleStepView(experiment: $experiment, onChangeMethod: { methodManager.changeMethod(to: nil) }, onStart: { changeCurrentStep(to: experiment.measuresAngle ? .chooseAngle : .setup) })
             case .chooseAngle:
-                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: { resetRun(); changeCurrentStep(to: .idle) }, onContinue: {
+                ChooseAngleStepView(desiredAngle: $desiredAngle, onCancel: leaveMethod, onContinue: {
                     self.isAngleSkipped = false
                     changeCurrentStep(to: .determineAngle)
                 }, onSkip: {
@@ -76,14 +80,13 @@ struct CameraMethodView: View {
                     if experiment.measuresAngle {
                         changeCurrentStep(to: isAngleSkipped ? .chooseAngle : .determineAngle)
                     } else {
-                        resetRun()
-                        changeCurrentStep(to: .idle)
+                        leaveMethod()
                     }
-                }, onContinue: { changeCurrentStep(to: experiment.measuresAngle ? .record : .level) })
+                }, onContinue: { changeCurrentStep(to: experiment.levelsPhone ? .level : .record) })
             case .level:
                 LevelStepView(marginOfErrorForAngle: marginOfErrorForAngle, currentDeviceOrientation: currentDeviceOrientation, isLevel: isLevel, isShowingDeviceOrientationNotValidDisclaimer: isShowingDeviceOrientationNotValidDisclaimer, onBack: { changeCurrentStep(to: .setup) }, onSkip: { changeCurrentStep(to: .record) }, onContinue: { changeCurrentStep(to: .record) })
             case .record:
-                RecordStepView(experiment: experiment, captureManager: captureManager, levelMargin: experiment.measuresAngle ? nil : marginOfErrorForAngle, onBack: { changeCurrentStep(to: experiment.measuresAngle ? .setup : .level) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
+                RecordStepView(experiment: experiment, captureManager: captureManager, levelMargin: experiment.levelsPhone ? marginOfErrorForAngle : nil, onBack: { changeCurrentStep(to: experiment.levelsPhone ? .level : .setup) }, onRecord: startRecording, onStop: { captureManager.stopRecording() }, onImported: { url in
                     loadClip(at: url, isImported: true)
                     changeCurrentStep(to: .trim)
                 })
@@ -113,7 +116,7 @@ struct CameraMethodView: View {
             case .analyze:
                 AnalyzeStepView(data: data, onFinished: { changeCurrentStep(to: .completed) })
             case .completed:
-                CompletedStepView(desiredAngle: targetAngle, capturedAngle: capturedAngle, data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: true, videoURL: videoURL, photoURL: photoURL, onRetryExport: exportCSV, onExit: { resetRun(); changeCurrentStep(to: .idle) })
+                CompletedStepView(desiredAngle: targetAngle, capturedAngle: capturedAngle, data: data, csvURL: csvURL, desmosURL: desmosURL, videoURL: videoURL, photoURL: photoURL, onRetryExport: exportCSV, onExit: leaveMethod)
             }
         }
         // Check the step first so the body only observes `currentAngle` while the angle is on screen.
@@ -127,6 +130,7 @@ struct CameraMethodView: View {
             // rather than kept with a gap in it.
             updateCaptureSession(scenePhase: newPhase)
         }
+        .onAppear(perform: updateForCurrentStep)
         .onDisappear {
             captureManager.stop()
         }
@@ -137,17 +141,31 @@ struct CameraMethodView: View {
             self.currentStep = step
         }
 
+        updateForCurrentStep()
+    }
+
+    /// Starts and stops what the current step needs: on each change of step, and for the first one.
+    private func updateForCurrentStep() {
         updateAngleUpdates()
         updateCaptureSession(scenePhase: scenePhase)
 
         // Keep the screen awake while the phone is on the track, being levelled or filming, where nobody touches it.
-        UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .level, .record].contains(step)
+        UIApplication.shared.isIdleTimerDisabled = [.determineAngle, .level, .record].contains(currentStep)
+    }
+
+    /// Ends the run and goes back to choosing a method.
+    private func leaveMethod() {
+        resetRun()
+        angleManager.stop()
+        captureManager.stop()
+        UIApplication.shared.isIdleTimerDisabled = false
+        methodManager.show(.methods)
     }
 
     /// Runs angle updates only while the angle is on screen: the track's, or the phone's own while it is
     /// levelled and while a projectile is filmed, where the record step shows whether it is still level.
     private func updateAngleUpdates() {
-        if currentStep == .determineAngle || currentStep == .level || (currentStep == .record && !experiment.measuresAngle) {
+        if currentStep == .determineAngle || currentStep == .level || (currentStep == .record && experiment.levelsPhone) {
             angleManager.start()
         } else {
             angleManager.stop()
@@ -197,10 +215,13 @@ struct CameraMethodView: View {
 
     private func finishMeasuring() {
         if let calibration, let frames = scrubber?.frames {
-            if experiment == .projectile {
-                self.data = .position(TrackGeometry.makePositionSplits(from: trackedPoints, calibration: calibration, seconds: frames.seconds(at:)))
-            } else {
+            switch experiment {
+            case .airTrack:
                 self.data = .distance(TrackGeometry.makeSplits(from: trackedPoints, calibration: calibration, seconds: frames.seconds(at:)))
+            case .projectile:
+                self.data = .position(TrackGeometry.makePositionSplits(from: trackedPoints, calibration: calibration, seconds: frames.seconds(at:)))
+            case .circularMotion:
+                self.data = .circle(TrackGeometry.makeCircleSplits(from: trackedPoints, calibration: calibration, seconds: frames.seconds(at:)))
             }
         }
 
@@ -277,7 +298,7 @@ struct CameraMethodView: View {
         RunMediaExporter.removeTempFiles()
     }
 
-    /// The angle the track was set to. `nil` when the angle steps were skipped, and for a projectile, which has none.
+    /// The angle the track was set to. `nil` when the angle steps were skipped, and for a projectile or a circle, which have none.
     private var targetAngle: Double? {
         experiment.measuresAngle && !isAngleSkipped ? desiredAngle : nil
     }
@@ -298,7 +319,7 @@ struct CameraMethodView: View {
 }
 
 #Preview {
-    CameraMethodView()
+    CameraMethodView(experiment: .airTrack)
         .environment(AngleManager())
         .environment(CameraCaptureManager())
         .environment(MethodManager())

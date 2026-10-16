@@ -123,7 +123,14 @@ struct RecordStepView: View {
 
     /// What to do while the camera is rolling: what is released, and where the clip ends.
     private var recordingInstruction: LocalizedStringKey {
-        experiment == .projectile ? "Launch the object, then stop once it lands." : "Release the cart, then stop once it reaches the end of the track."
+        switch experiment {
+        case .airTrack:
+            return "Release the cart, then stop once it reaches the end of the track."
+        case .projectile:
+            return "Launch the object, then stop once it lands."
+        case .circularMotion:
+            return "Set the marker going round, then stop after a few turns."
+        }
     }
 
     private var isCameraRunning: Bool {

@@ -5,23 +5,37 @@
 
 import Foundation
 
-/// What the camera method is filming. Both run the same steps on the video; they differ in whether there
-/// is a track whose angle is set first, and in what the tracked points become.
+/// What the camera method is filming. All three run the same steps on the video; they differ in what comes
+/// before (a track whose angle is set, a phone to level, or neither) and in what the tracked points become.
 enum CameraExperiment: String, CaseIterable, Identifiable {
     /// A cart on a sloped track: distance along the track against time.
     case airTrack = "Air Track"
     /// An object in flight: x and y from where it started against time.
     case projectile = "Projectile"
+    /// A marker going round, filmed from above: x, y and angle about the centre of its circle against time.
+    case circularMotion = "Circular Motion"
 
     var id: Self { self }
 
-    /// `true` when there is a track, whose angle is set before filming. A projectile has none.
+    /// `true` when there is a track, whose angle is set before filming. A projectile and a circle have none.
     var measuresAngle: Bool {
         switch self {
         case .airTrack:
             return true
-        case .projectile:
+        case .projectile, .circularMotion:
             return false
+        }
+    }
+
+    /// `true` when the phone is levelled with its sensors before filming. Only a projectile's x and y
+    /// follow the picture's edges closely enough for that to matter; a circle filmed from above is barely
+    /// changed by a small tilt, and a phone looking straight down is lying flat, which the angle reading refuses.
+    var levelsPhone: Bool {
+        switch self {
+        case .airTrack, .circularMotion:
+            return false
+        case .projectile:
+            return true
         }
     }
 
@@ -31,16 +45,8 @@ enum CameraExperiment: String, CaseIterable, Identifiable {
             return Method.camera.imageName
         case .projectile:
             return "circle.dotted.and.circle"
-        }
-    }
-
-    /// Shown under the method's name on its start screen, in place of the method's own description.
-    var description: String {
-        switch self {
-        case .airTrack:
-            return "Film the cart with your iPhone's camera and track its motion from the video."
-        case .projectile:
-            return "Film an object in flight and track its x and y position from the video."
+        case .circularMotion:
+            return "circle.dotted.circle"
         }
     }
 
@@ -51,6 +57,8 @@ enum CameraExperiment: String, CaseIterable, Identifiable {
             return "cart"
         case .projectile:
             return "object"
+        case .circularMotion:
+            return "marker"
         }
     }
 }

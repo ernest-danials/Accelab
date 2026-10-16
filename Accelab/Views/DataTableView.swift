@@ -6,7 +6,7 @@
 import SwiftUI
 
 /// A preview of the run's data as it is written to the CSV file: the same columns and the same digits,
-/// under headings written for reading.
+/// under headings written for reading. Only the columns chosen for export are shown.
 struct DataTableView: View {
     private let headings: [String]
     /// Every row as text, read once from the exporter rather than on each redraw.
@@ -14,14 +14,23 @@ struct DataTableView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    init(data: RunData) {
+    init(data: RunData, columns selection: Set<Int>? = nil) {
+        self.headings = CSVExporter.select(selection, from: Self.columnHeadings(for: data))
+        self.rows = CSVExporter.rows(for: data, including: selection)
+    }
+
+    /// The columns' headings, written for reading. Also what VoiceOver reads for the columns on the screen where a method is chosen.
+    static func columnHeadings(for data: RunData) -> [String] {
         switch data {
         case .distance:
-            self.headings = ["Time (s)", "Distance (m)"]
+            return ["Time (s)", "Distance (m)"]
         case .position:
-            self.headings = ["Time (s)", "x (m)", "y (m)"]
+            return ["Time (s)", "x (m)", "y (m)"]
+        case .rotation:
+            return ["Time (s)", "ω (rad/s)", "ω² (rad²/s²)", "Centripetal (m/s²)", "Tangential (m/s²)"]
+        case .circle:
+            return ["Time (s)", "x (m)", "y (m)", "θ (rad)", "Radius (m)"]
         }
-        self.rows = CSVExporter.rows(for: data)
     }
 
     var body: some View {
@@ -73,4 +82,18 @@ struct DataTableView: View {
 
 #Preview("Projectile") {
     DataTableView(data: .position((0..<40).map { PositionSplit(timeElapsed: Double($0) / 60, x: 2.5 * Double($0) / 60, y: 3 * Double($0) / 60 - 4.905 * pow(Double($0) / 60, 2)) }))
+}
+
+#Preview("Circle") {
+    DataTableView(data: .circle((0..<40).map { index in
+        let angle = 2 * Double.pi * Double(index) / 30
+        return CircleSplit(timeElapsed: Double(index) / 15, x: 0.2 * cos(angle), y: 0.2 * sin(angle), angle: angle, radius: 0.2)
+    }))
+}
+
+#Preview("Circular Motion") {
+    DataTableView(data: .rotation((0..<40).map { index in
+        let angularVelocity = index < 20 ? 0.4 * Double(index) : 0.4 * Double(40 - index)
+        return RotationSplit(timeElapsed: Double(index) / 4, angularVelocity: angularVelocity, centripetalAcceleration: angularVelocity * angularVelocity * 0.15, tangentialAcceleration: index < 20 ? 0.06 : -0.06)
+    }))
 }

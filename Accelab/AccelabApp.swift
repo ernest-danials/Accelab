@@ -12,21 +12,27 @@ import SwiftData
 struct AccelabApp: App {
     @State private var angleManager: AngleManager = .init()
     @State private var motionMeasuringManager: MotionMeasuringManager = .init()
+    @State private var rotationMeasuringManager: RotationMeasuringManager = .init()
     @State private var cameraCaptureManager: CameraCaptureManager = .init()
     @State private var methodManager: MethodManager = .init()
     
     var body: some Scene {
         WindowGroup {
             Group {
-                if let currentMethod = methodManager.currentMethod {
-                    switch currentMethod {
-                    case .camera:
-                        CameraMethodView()
-                    case .sensor:
-                        SensorMethodView()
-                    }
-                } else {
+                switch methodManager.screen {
+                case .home:
+                    SelectExperimentView()
+                case .methods:
                     SelectMethodView()
+                case .method(.camera):
+                    CameraMethodView(experiment: methodManager.experiment.cameraExperiment)
+                case .method(.sensor):
+                    // Only opened for an experiment the sensors can do.
+                    if let experiment = methodManager.experiment.sensorExperiment {
+                        SensorMethodView(experiment: experiment)
+                    } else {
+                        SelectMethodView()
+                    }
                 }
             }
             .onOpenURL { url in
@@ -35,6 +41,7 @@ struct AccelabApp: App {
         }
         .environment(angleManager)
         .environment(motionMeasuringManager)
+        .environment(rotationMeasuringManager)
         .environment(cameraCaptureManager)
         .environment(methodManager)
         .modelContainer(for: SavedRun.self)

@@ -13,8 +13,6 @@ struct CompletedStepView: View {
     let csvURL: URL?
     /// The data as a text file Desmos can import.
     let desmosURL: URL?
-    /// `true` for the methods that film the run, whose export is a menu of the data, the video and the photo.
-    var offersMedia: Bool = false
     /// The recorded clip, when the run was filmed in the app. `nil` for the sensor method and imported clips.
     var videoURL: URL? = nil
     /// A photo of the last tracked frame with every point on it. `nil` for the sensor method, and
@@ -25,15 +23,22 @@ struct CompletedStepView: View {
     let onExit: () -> Void
 
     @State private var isShowingConfirmationDialogToExit: Bool = false
+    /// The columns chosen for export, which the table shows too. `nil` is all of them.
+    @State private var selectedColumns: Set<Int>? = nil
 
     var body: some View {
         ZStack {
             RunSummaryView(desiredAngle: desiredAngle, capturedAngle: capturedAngle, data: data)
                 .offset(y: 15)
 
+            RunTableButton(data: data, columns: selectedColumns)
+                .alignView(to: .trailing)
+                .alignViewVertically(to: .top)
+                .padding()
+
             GlassEffectContainer {
-                HStack {
-                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, offersMedia: offersMedia, videoURL: videoURL, photoURL: photoURL, onRetryExport: onRetryExport)
+                HStack(alignment: .bottom) {
+                    RunExportControls(data: data, csvURL: csvURL, desmosURL: desmosURL, selectedColumns: $selectedColumns, videoURL: videoURL, photoURL: photoURL, onRetryExport: onRetryExport)
 
                     GlassIconButton(systemImage: "checkmark", label: "Done") {
                         self.isShowingConfirmationDialogToExit = true

@@ -10,7 +10,7 @@ struct StepTitleView: View {
     let title: String
     let subtitle: String
     let description: String
-    /// Uses the larger home-screen styling, as on a method's idle step.
+    /// Uses the larger styling of the screens where the experiment and the method are chosen.
     let isProminent: Bool
     /// Leaves positioning to the step, for steps that lay themselves out around the title.
     var isInline: Bool = false
@@ -32,6 +32,8 @@ struct StepTitleView: View {
                 Text(subtitle)
                     .customFont(isProminent ? .title3 : .subheadline)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
             }
 
@@ -43,8 +45,8 @@ struct StepTitleView: View {
                 Text(description)
                     .customFont(.footnote)
                     .foregroundStyle(.secondary)
-                    // A method's start screen swaps one sentence for another (the camera's two experiments),
-                    // which fades. Rolling the letters over suits the short changes from step to step.
+                    // The home screen swaps one experiment's sentence for another, which fades. Rolling the
+                    // letters over suits the short changes from step to step.
                     .contentTransition(isProminent ? .opacity : .numericText())
                     .frame(maxWidth: isProminent ? 280 : nil, alignment: .leading)
             }

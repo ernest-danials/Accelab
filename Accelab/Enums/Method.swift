@@ -6,22 +6,12 @@
 import SwiftUI
 
 enum Method: String, CaseIterable, Identifiable {
-    // Camera comes first so the selection screen opens on it.
+    // Camera comes first so its card is the first on the screen where a method is chosen.
     case camera = "Camera"
     case sensor = "Sensor"
-    
+
     var id: Self { self }
-    
-    /// The method the selection screen steers people towards.
-    var isRecommended: Bool {
-        switch self {
-        case .camera:
-            return true
-        case .sensor:
-            return false
-        }
-    }
-    
+
     var imageName: String {
         switch self {
         case .camera:
@@ -30,7 +20,7 @@ enum Method: String, CaseIterable, Identifiable {
             return "gyroscope"
         }
     }
-    
+
     var color: Color {
         switch self {
         case .camera:
@@ -40,12 +30,8 @@ enum Method: String, CaseIterable, Identifiable {
         }
     }
 
-    var description: String {
-        switch self {
-        case .camera:
-            return "Film a cart, or an object in flight, and track its motion from the video."
-        case .sensor:
-            return "Attach your iPhone to the cart and measure its motion with the built-in sensors."
-        }
+    /// The name used in links (`accelab://circular-motion/sensor`).
+    var slug: String {
+        rawValue.lowercased()
     }
 }
